@@ -15,7 +15,7 @@ from ucapi.api_definitions import StatusCodes
 from ucapi.media_player import Attributes, Commands, Features, MediaPlayer, States
 
 from uc_intg_htpc.client import HTCPClient
-from uc_intg_htpc.config import HTCPConfig  # ✅ FIXED: Was uc_intg_htcp
+from uc_intg_htpc.config import HTCPConfig
 
 _LOG = logging.getLogger(__name__)
 
@@ -25,6 +25,9 @@ class HTCPMediaPlayer(MediaPlayer):
 
     def __init__(self, client: HTCPClient, config: HTCPConfig, api):
         """Initialize HTCP media player."""
+        # Initialize icon cache FIRST - before any method calls
+        self._icon_cache = {}
+        
         features = [
             Features.ON_OFF,
             Features.SELECT_SOURCE,
@@ -55,7 +58,7 @@ class HTCPMediaPlayer(MediaPlayer):
 
         super().__init__(
             identifier="htcp_monitor",
-            name="HTCP System Monitor",
+            name="HTPC System Monitor",
             features=features,
             attributes=attributes,
             cmd_handler=self._handle_command,
@@ -65,7 +68,6 @@ class HTCPMediaPlayer(MediaPlayer):
         self._config = config
         self._api = api
         self._current_source = "System Overview"
-        self._icon_cache = {}
         self._monitoring_task = None
 
     def _get_icon_base64(self, icon_filename: str) -> str:
