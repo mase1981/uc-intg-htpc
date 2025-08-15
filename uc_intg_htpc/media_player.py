@@ -15,7 +15,7 @@ from ucapi.api_definitions import StatusCodes
 from ucapi.media_player import Attributes, Commands, Features, MediaPlayer, States
 
 from uc_intg_htpc.client import HTCPClient
-from uc_intg_htcp.config import HTCPConfig
+from uc_intg_htpc.config import HTCPConfig  # ✅ FIXED: Was uc_intg_htcp
 
 _LOG = logging.getLogger(__name__)
 
@@ -55,7 +55,7 @@ class HTCPMediaPlayer(MediaPlayer):
 
         super().__init__(
             identifier="htcp_monitor",
-            name="HTPC System Monitor",
+            name="HTCP System Monitor",
             features=features,
             attributes=attributes,
             cmd_handler=self._handle_command,
