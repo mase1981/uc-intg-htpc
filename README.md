@@ -5,7 +5,7 @@
 
 Custom HTPC system monitoring and control integration for your Unfolded Circle Remote Two/3. Transform your remote into a powerful HTPC command center with real-time system monitoring and comprehensive Windows control.
 
-**NOTE:** This integration requires two components: LibreHardwareMonitor (free) running on your HTPC and the HTPC Agent (included).
+**NOTE:** This integration requires two components: LibreHardwareMonitor (free) running on your HTPC and the HTCP Agent (included).
 
 ## 🖥️ Features
 
@@ -49,15 +49,16 @@ Custom HTPC system monitoring and control integration for your Unfolded Circle R
    - Version: Latest release
    - Purpose: System sensor data collection
 
-2. **HTPC Agent** (Included with integration)
-   - File: `agents/HTCP_Agent.exe`
+2. **HTCP Agent** (Download from GitHub)
+   - Download: [HTCP_Agent.exe](https://github.com/mase1981/uc-intg-htpc/blob/main/agents/HTCP_Agent.exe)
+   - Click "Download raw file" to save the executable
    - Documentation: `agents/README_Agent.md`
    - Purpose: Windows command execution and control
 
 #### Network Requirements
 - **Port 8085**: LibreHardwareMonitor web server (HTTP)
-- **Port 8086**: HTPC Agent communication (HTTP)
-- **Same Network**: Both Remote and HTPC must be on same local network
+- **Port 8086**: HTCP Agent communication (HTTP)
+- **Same Network**: Both Remote and HTCP must be on same local network
 - **Firewall**: Ensure ports 8085 and 8086 are not blocked
 
 ## 🚀 Quick Start
@@ -75,9 +76,9 @@ Custom HTPC system monitoring and control integration for your Unfolded Circle R
    - Click: **OK**
 5. **Verify**: Open browser to `http://localhost:8085/data.json` - should show sensor data
 
-#### Install HTPC Agent
-1. **Download** `agents/HTCP_Agent.exe` from this repository
-2. **Place** in a permanent location (e.g., `C:\HTCP_Agent\`)
+#### Install HTCP Agent
+1. **Download** [HTCP_Agent.exe](https://github.com/mase1981/uc-intg-htpc/blob/main/agents/HTCP_Agent.exe) from GitHub
+2. **Right-click** → **Save As** → Place in permanent location (e.g., `C:\HTCP_Agent\`)
 3. **Run** `HTCP_Agent.exe` - will appear in system tray
 4. **Verify**: Check system tray for HTCP Agent icon
 5. **Test**: Right-click tray icon → **Status & Control** → should open web interface
@@ -85,8 +86,9 @@ Custom HTPC system monitoring and control integration for your Unfolded Circle R
 > 📖 **For detailed agent setup and troubleshooting**, see: [`agents/README_Agent.md`](agents/README_Agent.md)
 
 ### Step 2: Configure Network
-**NOTE**: It is best and ideal to give your PC a static IP via your router reservation, the below are instructions for users to find their PC IP, however it is best to simply give it a static IP.
-#### Find Your HTPC IP Address
+**NOTE**: It is best and ideal to give your PC a static IP via your router reservation. The below are instructions for users to find their PC IP, however it is best to simply give it a static IP.
+
+#### Find Your HTCP IP Address
 ```bash
 # Method 1: Command prompt
 ipconfig
@@ -98,13 +100,13 @@ Get-NetIPAddress -AddressFamily IPv4 | Where-Object {$_.IPAddress -like "192.168
 #### Test Connectivity
 ```bash
 # From any device on your network, test both services:
-http://YOUR_HTPC_IP:8085/data.json    # LibreHardwareMonitor
-http://YOUR_HTPC_IP:8086/status       # HTPC Agent
+http://YOUR_HTCP_IP:8085/data.json    # LibreHardwareMonitor
+http://YOUR_HTCP_IP:8086/status       # HTCP Agent
 ```
 
-**Example**: If your HTPC IP is `192.168.1.100`:
+**Example**: If your HTCP IP is `192.168.1.100`:
 - LibreHardwareMonitor: `http://192.168.1.100:8085/data.json`
-- HTPC Agent: `http://192.168.1.100:8086/status`
+- HTCP Agent: `http://192.168.1.100:8086/status`
 
 ### Step 3: Install Integration on Remote
 
@@ -116,19 +118,19 @@ http://YOUR_HTPC_IP:8086/status       # HTPC Agent
 
 2. **Install Integration**
    - Navigate to: **Integrations** → **Add New** / **Install Custom**
-   - Upload: **uc-intg-htpc-***
+   - Upload: **uc-intg-htcp-***
    - Click: **Upload**
 
 3. **Configure Device**
-   - Enter your HTPC IP address (e.g., `192.168.1.100`)
+   - Enter your HTCP IP address (e.g., `192.168.1.100`)
    - Select temperature unit (Celsius/Fahrenheit)
    - Click: **Continue**
    - Wait for automatic connection testing
    - Complete setup
 
 4. **Add Entities**
-   - **HTPC System Monitor** (Media Player) - for system monitoring
-   - **HTPC Advanced Remote** (Remote) - for system control
+   - **HTCP System Monitor** (Media Player) - for system monitoring
+   - **HTCP Advanced Remote** (Remote) - for system control
    - Add both to your desired activities
 
 ## 🎮 Using the Integration
@@ -153,7 +155,7 @@ Use the **SELECT SOURCE** feature to switch between monitoring views:
 #### Real-time Updates
 - **Refresh Rate**: 5 seconds
 - **Temperature Units**: Configurable (°C/°F)
-- **Connection Status**: Shows connection errors if HTPC unreachable
+- **Connection Status**: Shows connection errors if HTCP unreachable
 - **Data Persistence**: Maintains last known values during brief disconnections
 
 ### Remote Control (Remote Entity)
@@ -239,9 +241,9 @@ Located at: `config.json` in integration directory
 }
 ```
 
-### HTPC Agent Configuration
+### HTCP Agent Configuration
 
-The HTPC Agent provides system tray management:
+The HTCP Agent provides system tray management:
 
 - **Right-click** system tray icon for options
 - **Status & Control**: Opens web interface
@@ -258,22 +260,23 @@ The HTPC Agent provides system tray management:
 **Problem**: Integration setup fails with connection error
 
 **Solutions**:
-1. **Verify HTPC IP address**:
+1. **Verify HTCP IP address**:
    ```bash
-   ping YOUR_HTPC_IP
+   ping YOUR_HTCP_IP
    ```
 2. **Test LibreHardwareMonitor**:
    ```bash
-   curl http://YOUR_HTPC_IP:8085/data.json
+   curl http://YOUR_HTCP_IP:8085/data.json
    ```
 3. **Test HTCP Agent**:
    ```bash
-   curl http://YOUR_HTPC_IP:8086/health
+   curl http://YOUR_HTCP_IP:8086/health
    ```
 4. **Check Windows Firewall**:
    - Allow ports 8085 and 8086
    - Or temporarily disable firewall for testing
 5. **Verify same network**: Both devices must be on same subnet
+6. **Restart LibreHardwareMonitor**: If setup fails, restart LibreHardwareMonitor and re-enable web server
 
 **Problem**: LibreHardwareMonitor shows no sensors
 
@@ -283,12 +286,12 @@ The HTPC Agent provides system tray management:
 3. **Update motherboard drivers**: Ensure chipset drivers are current
 4. **Enable sensors in BIOS**: Some sensors may be disabled in BIOS
 
-**Problem**: HTPC Agent not starting
+**Problem**: HTCP Agent not starting
 
 **Solutions**:
 1. **Check antivirus**: Some antivirus may block the executable
 2. **Run as Administrator**: May require elevated privileges
-3. **Check dependencies**: Ensure Python runtime dependencies are met
+3. **Check dependencies**: Ensure .NET runtime is installed
 4. **Firewall exceptions**: Add HTCP_Agent.exe to firewall exceptions
 
 > 📖 **For detailed agent troubleshooting**, see: [`agents/README_Agent.md`](agents/README_Agent.md)
@@ -300,8 +303,9 @@ The HTPC Agent provides system tray management:
 **Solutions**:
 1. **Check network connectivity**: Ping test between devices
 2. **Verify services running**: Both LibreHardwareMonitor and HTCP Agent
-3. **Check IP address changes**: HTPC may have received new IP via DHCP
+3. **Check IP address changes**: HTCP may have received new IP via DHCP
 4. **Restart services**: Restart both LibreHardwareMonitor and HTCP Agent
+5. **Re-enable web server**: In LibreHardwareMonitor, disable and re-enable web server
 
 **Problem**: Remote commands not working
 
@@ -328,7 +332,7 @@ The HTPC Agent provides system tray management:
 **Check integration status**:
 ```bash
 # Via web configurator
-http://YOUR_REMOTE_IP/configurator → Integrations → HTPC → Status
+http://YOUR_REMOTE_IP/configurator → Integrations → HTCP → Status
 ```
 
 **Test LibreHardwareMonitor API**:
@@ -358,7 +362,7 @@ curl -X POST "http://HTCP_IP:8086/command" \
 
 ### Static IP Configuration
 
-For reliable operation, configure static IP for your HTPC:
+For reliable operation, configure static IP for your HTCP:
 
 **Windows Network Settings**:
 1. **Control Panel** → **Network and Internet** → **Network Connections**
@@ -374,7 +378,7 @@ For reliable operation, configure static IP for your HTPC:
 2. **Place in** Startup folder: `Win+R` → `shell:startup`
 3. **Right-click shortcut** → **Properties** → **Advanced** → **Run as administrator**
 
-**Auto-start HTPC Agent**:
+**Auto-start HTCP Agent**:
 1. **Create shortcut** to HTCP_Agent.exe  
 2. **Place in** Startup folder: `Win+R` → `shell:startup`
 3. **Properties** → **Run**: **Minimized**
@@ -410,24 +414,24 @@ venv\Scripts\activate  # Windows
 pip install -r requirements.txt
 ```
 
-### Building HTPC Agent
+### Building HTCP Agent
 
 ```bash
 # Install PyInstaller
 pip install pyinstaller
 
 # Build executable
-pyinstaller --onefile --windowed --name "HTPC_Agent" --version-file="version_info.txt" htcp_agent.py
+pyinstaller --onefile --windowed --name "HTCP_Agent" --version-file="version_info.txt" htcp_agent.py
 ```
 
 ### Testing
 
 ```bash
 # Run integration directly
-python -m uc_intg_htpc.driver
+python -m uc_intg_htcp.driver
 
 # Test with debug logging
-UC_INTEGRATION_HTTP_PORT=9090 python uc_intg_htpc/driver.py
+UC_INTEGRATION_HTTP_PORT=9090 python uc_intg_htcp/driver.py
 ```
 
 ## 📄 License
@@ -450,6 +454,6 @@ For enterprise deployments or professional integration services, contact the dev
 
 **Made with ❤️ for the Unfolded Circle Community**
 
-*Transform your HTPC into a smart, monitored, and fully controllable entertainment center with your Remote Two/3!*
+*Transform your HTCP into a smart, monitored, and fully controllable entertainment center with your Remote Two/3!*
 
 **Author**: Meir Miyara

@@ -1,459 +1,351 @@
-# HTPC System Monitor Integration for Unfolded Circle Remote Two/3
+# HTCP Agent - Windows Command Execution Service
 
-[![GitHub Release](https://img.shields.io/github/release/mase1981/uc-intg-htpc.svg)](https://github.com/mase1981/uc-intg-htpc/releases)
-[![GitHub License](https://img.shields.io/github/license/mase1981/uc-intg-htpc.svg)](https://github.com/mase1981/uc-intg-htpc/blob/main/LICENSE)
+The HTCP Agent is a lightweight Windows service that enables remote command execution for the HTPC System Monitor Integration. It provides secure, local network communication between your Unfolded Circle Remote and Windows PC.
 
-Custom HTPC system monitoring and control integration for your Unfolded Circle Remote Two/3. Transform your remote into a powerful HTPC command center with real-time system monitoring and comprehensive Windows control.
+## 📋 Overview
 
-**NOTE:** This integration requires two components: LibreHardwareMonitor (free) running on your HTPC and the HTCP Agent (included).
+### What It Does
+- **Command Execution**: Processes remote commands from the HTPC integration
+- **System Control**: Manages Windows shortcuts, applications, and power states
+- **Web Interface**: Provides HTTP API for integration communication
+- **System Tray**: Runs quietly in background with status monitoring
 
-## 🖥️ Features
+### Security Model
+- **Local Network Only**: Binds to all interfaces but intended for LAN use
+- **No Authentication**: Designed for trusted home networks
+- **Limited Scope**: Only executes predefined safe commands
+- **Process Isolation**: Runs in user context, not system level
 
-### System Monitoring
-- **Real-time Performance**: CPU temperature, load, and clock speed
-- **Memory Usage**: RAM utilization with detailed breakdown
-- **Storage Activity**: Disk usage, temperature, and activity monitoring
-- **Network Activity**: Upload/download speeds and utilization
-- **Temperature Overview**: CPU, storage, and motherboard temperatures
-- **Fan Monitoring**: Active fan detection with RPM readings
-- **Power Consumption**: CPU package power draw (when available)
-- **GPU Performance**: Dedicated GPU monitoring (when available)
+## 🚀 Installation
 
-### Remote Control Interface
-- **6-Page Layout**: Navigation, Media, Windows, System Tools, Function Keys, Power
-- **Windows Shortcuts**: Complete Win+key combinations and system controls
-- **Media Controls**: Full transport controls for any media application
-- **System Tools**: Built-in Windows applications and web services
-- **Function Keys**: F1-F12 with dedicated shortcuts
-- **Power Management**: Sleep, hibernate, shutdown, restart controls
-
-### Advanced Features
-- **Custom App Launching**: Use "Send Command" to launch any Windows application
-- **Dynamic Source Switching**: 8 monitoring views accessible via SOURCE selection
-- **Base64 Icon Embedding**: Offline operation with embedded icons
-- **Real-time Updates**: 5-second monitoring refresh with efficient state management
-
-## 📋 Prerequisites
-
-### Hardware Requirements
-- **Windows PC/HTPC**: Windows 10/11 system to monitor and control
-- **Remote Two/3**: Unfolded Circle Remote Two/3
-- **Network**: Both devices on same local network
-- **Hardware Sensors**: Compatible motherboard with sensor chips (for full monitoring)
-
-### Software Requirements
-
-#### Required Downloads
-1. **LibreHardwareMonitor** (Free)
-   - Download: [https://github.com/LibreHardwareMonitor/LibreHardwareMonitor/releases](https://github.com/LibreHardwareMonitor/LibreHardwareMonitor/releases)
-   - Version: Latest release
-   - Purpose: System sensor data collection
-
-2. **HTCP Agent** (Download from GitHub)
-   - Download: [HTCP_Agent.exe](https://github.com/mase1981/uc-intg-htpc/blob/main/agents/HTCP_Agent.exe)
-   - Click "Download raw file" to save the executable
-   - Documentation: `agents/README_Agent.md`
-   - Purpose: Windows command execution and control
-
-#### Network Requirements
-- **Port 8085**: LibreHardwareMonitor web server (HTTP)
-- **Port 8086**: HTCP Agent communication (HTTP)
-- **Same Network**: Both Remote and HTCP must be on same local network
-- **Firewall**: Ensure ports 8085 and 8086 are not blocked
-
-## 🚀 Quick Start
-
-### Step 1: Prepare Your HTPC
-
-#### Install LibreHardwareMonitor
-1. **Download** LibreHardwareMonitor from official GitHub releases
-2. **Extract** to a permanent location (e.g., `C:\Program Files\LibreHardwareMonitor\`)
-3. **Run as Administrator** (required for sensor access)
-4. **Enable Web Server**:
-   - Go to: **Options** → **Web Server**
-   - Check: **☑ Run web server**
-   - Port: **8085** (default)
-   - Click: **OK**
-5. **Verify**: Open browser to `http://localhost:8085/data.json` - should show sensor data
-
-#### Install HTCP Agent
-1. **Download** [HTCP_Agent.exe](https://github.com/mase1981/uc-intg-htpc/blob/main/agents/HTCP_Agent.exe) from GitHub
-2. **Right-click** → **Save As** → Place in permanent location (e.g., `C:\HTCP_Agent\`)
-3. **Run** `HTCP_Agent.exe` - will appear in system tray
+### Quick Install
+1. **Download**: `HTCP_Agent.exe` from this repository
+2. **Place**: In permanent location (e.g., `C:\HTCP_Agent\`)
+3. **Run**: Double-click `HTCP_Agent.exe`
 4. **Verify**: Check system tray for HTCP Agent icon
-5. **Test**: Right-click tray icon → **Status & Control** → should open web interface
 
-> 📖 **For detailed agent setup and troubleshooting**, see: [`agents/README_Agent.md`](agents/README_Agent.md)
+### Detailed Installation
 
-### Step 2: Configure Network
-**NOTE**: It is best and ideal to give your PC a static IP via your router reservation. The below are instructions for users to find their PC IP, however it is best to simply give it a static IP.
-
-#### Find Your HTCP IP Address
+#### Step 1: Download and Place
 ```bash
-# Method 1: Command prompt
-ipconfig
+# Create directory
+mkdir C:\HTCP_Agent
 
-# Method 2: PowerShell
-Get-NetIPAddress -AddressFamily IPv4 | Where-Object {$_.IPAddress -like "192.168.*"}
+# Copy executable
+copy HTCP_Agent.exe C:\HTCP_Agent\
 ```
 
-#### Test Connectivity
+#### Step 2: First Run
+- **Double-click** `C:\HTCP_Agent\HTCP_Agent.exe`
+- **Allow** Windows Firewall access if prompted
+- **Check** system tray for HTCP Agent icon
+- **Test** by right-clicking tray icon → **Status & Control**
+
+#### Step 3: Auto-Start (Optional)
 ```bash
-# From any device on your network, test both services:
-http://YOUR_HTCP_IP:8085/data.json    # LibreHardwareMonitor
-http://YOUR_HTCP_IP:8086/status       # HTCP Agent
-```
+# Method 1: Startup folder
+# Win+R → shell:startup
+# Create shortcut to HTCP_Agent.exe
 
-**Example**: If your HTCP IP is `192.168.1.100`:
-- LibreHardwareMonitor: `http://192.168.1.100:8085/data.json`
-- HTCP Agent: `http://192.168.1.100:8086/status`
-
-### Step 3: Install Integration on Remote
-
-#### Via Remote Two/3 Web Interface
-1. **Access Web Configurator**
-   ```
-   http://YOUR_REMOTE_IP/configurator
-   ```
-
-2. **Install Integration**
-   - Navigate to: **Integrations** → **Add New** / **Install Custom**
-   - Upload: **uc-intg-htcp-***
-   - Click: **Upload**
-
-3. **Configure Device**
-   - Enter your HTCP IP address (e.g., `192.168.1.100`)
-   - Select temperature unit (Celsius/Fahrenheit)
-   - Click: **Continue**
-   - Wait for automatic connection testing
-   - Complete setup
-
-4. **Add Entities**
-   - **HTCP System Monitor** (Media Player) - for system monitoring
-   - **HTCP Advanced Remote** (Remote) - for system control
-   - Add both to your desired activities
-
-## 🎮 Using the Integration
-
-### System Monitoring (Media Player Entity)
-
-#### Source Selection
-Use the **SELECT SOURCE** feature to switch between monitoring views:
-
-| Source | Information Displayed |
-|--------|----------------------|
-| **System Overview** | CPU temp/load, CPU power, Memory usage |
-| **CPU Performance** | Temperature, Load percentage, Clock speed |
-| **GPU Performance** | GPU temperature and load (if dedicated GPU) |
-| **Memory Usage** | Used/Total memory with percentage |
-| **Storage Activity** | Used/Total storage with usage percentage |
-| **Network Activity** | Upload/Download speeds |
-| **Temperature Overview** | CPU, Storage, Motherboard temperatures |
-| **Fan Monitoring** | Active fans count, Average/Maximum speeds |
-| **Power Consumption** | CPU package power draw |
-
-#### Real-time Updates
-- **Refresh Rate**: 5 seconds
-- **Temperature Units**: Configurable (°C/°F)
-- **Connection Status**: Shows connection errors if HTCP unreachable
-- **Data Persistence**: Maintains last known values during brief disconnections
-
-### Remote Control (Remote Entity)
-
-#### Page Overview
-| Page | Purpose | Key Features |
-|------|---------|--------------|
-| **Navigation** | Directional controls | Arrow keys, Enter, Escape, Tab, Space |
-| **Media Controls** | Media playback | Play/Pause, Stop, Volume, Transport controls |
-| **Windows Shortcuts** | System navigation | Win+key combinations, Alt+Tab, Task Manager |
-| **System Tools** | Applications | Calculator, Notepad, PowerShell, Web services |
-| **Function Keys** | F1-F12 | Function keys with quick system shortcuts |
-| **Power & System** | Power management | Sleep, Hibernate, Shutdown, Restart |
-
-#### Custom Application Launching
-
-Use the **Send Command** feature in the Remote web configurator to launch any Windows application:
-
-**Format**: `launch_exe:FULL_PATH_TO_EXECUTABLE`
-
-**Examples**:
-```bash
-# Launch Steam
-launch_exe:"C:\Program Files (x86)\Steam\steam.exe"
-
-# Launch VLC Media Player  
-launch_exe:"C:\Program Files\VideoLAN\VLC\vlc.exe"
-
-# Launch Plex Desktop
-launch_exe:"C:\Users\%USERNAME%\AppData\Local\Plex\Plex.exe"
-
-# Launch Chrome
-launch_exe:"C:\Program Files\Google\Chrome\Application\chrome.exe"
-
-# Launch Kodi
-launch_exe:"C:\Program Files\Kodi\kodi.exe"
-
-# Launch OBS Studio
-launch_exe:"C:\Program Files\obs-studio\bin\64bit\obs64.exe"
-```
-
-**URL Launching**:
-```bash
-# Launch websites
-launch_url:https://www.netflix.com
-launch_url:https://www.youtube.com
-launch_url:https://app.plex.tv
-launch_url:http://localhost:8096  # Jellyfin
-```
-
-#### Finding Application Paths
-```bash
-# Method 1: Search in Start Menu
-# Right-click application → "Open file location" → Properties → Copy path
-
-# Method 2: Command Prompt
-where chrome
-where vlc
-
-# Method 3: PowerShell
-Get-Command chrome | Select-Object Source
+# Method 2: Task Scheduler (more reliable)
+# Windows → Task Scheduler → Create Basic Task
+# Trigger: At startup
+# Action: Start program → C:\HTCP_Agent\HTCP_Agent.exe
 ```
 
 ## 🔧 Configuration
 
-### Environment Variables (Optional)
+### Network Settings
+- **Port**: 8086 (default, not configurable)
+- **Interface**: 0.0.0.0 (all interfaces)
+- **Protocol**: HTTP (local network only)
 
-| Variable | Description | Default |
-|----------|-------------|---------|
-| `UC_INTEGRATION_HTTP_PORT` | Integration HTTP port | `9090` |
-| `UC_INTEGRATION_INTERFACE` | Bind interface | `0.0.0.0` |
-| `UC_CONFIG_HOME` | Configuration directory | `./` |
+### Firewall Configuration
+The agent requires inbound connections on port 8086:
 
-### Configuration File
+**Automatic** (prompted on first run):
+- Windows will ask to allow firewall access
+- Click **Allow access** for both Private and Public networks
 
-Located at: `config.json` in integration directory
+**Manual**:
+```bash
+# Windows Firewall command
+netsh advfirewall firewall add rule name="HTCP Agent" dir=in action=allow protocol=TCP localport=8086
 
-```json
-{
-  "host": "192.168.1.100",
-  "port": 8085,
-  "temperature_unit": "celsius"
-}
+# Or via GUI:
+# Control Panel → Windows Defender Firewall → Allow an app
+# Browse → Select HTCP_Agent.exe → Add
 ```
 
-### HTCP Agent Configuration
+## 🎮 System Tray Interface
 
-The HTCP Agent provides system tray management:
+### Right-Click Menu Options
 
-- **Right-click** system tray icon for options
-- **Status & Control**: Opens web interface
-- **Restart Service**: Restarts the agent
-- **View Log**: Opens log file for troubleshooting
-- **Quit**: Stops the agent
+| Option | Description |
+|--------|-------------|
+| **Status & Control** | Opens web interface in browser |
+| **View Log** | Opens log file for troubleshooting |
+| **Restart Service** | Restarts the agent service |
+| **About** | Shows version and build information |
+| **Quit** | Stops the agent completely |
 
-> 📖 **For comprehensive agent documentation**, see: [`agents/README_Agent.md`](agents/README_Agent.md)
+### Status Indicators
+- **Green Icon**: Service running normally
+- **Yellow Icon**: Service starting or restarting
+- **Red Icon**: Service error or stopped
+- **No Icon**: Service not running
 
-## 🛠️ Troubleshooting
+## 🌐 Web Interface
 
-### Setup Issues
+Access the web interface at: `http://localhost:8086/status`
 
-**Problem**: Integration setup fails with connection error
+### Available Endpoints
 
-**Solutions**:
-1. **Verify HTCP IP address**:
-   ```bash
-   ping YOUR_HTCP_IP
-   ```
-2. **Test LibreHardwareMonitor**:
-   ```bash
-   curl http://YOUR_HTCP_IP:8085/data.json
-   ```
-3. **Test HTCP Agent**:
-   ```bash
-   curl http://YOUR_HTCP_IP:8086/health
-   ```
-4. **Check Windows Firewall**:
-   - Allow ports 8085 and 8086
-   - Or temporarily disable firewall for testing
-5. **Verify same network**: Both devices must be on same subnet
-6. **Restart LibreHardwareMonitor**: If setup fails, restart LibreHardwareMonitor and re-enable web server
+| Endpoint | Method | Purpose | Example |
+|----------|--------|---------|---------|
+| `/status` | GET | Service status page | Browser access |
+| `/health` | GET | Health check | Integration testing |
+| `/command` | POST | Execute command | Remote control |
 
-**Problem**: LibreHardwareMonitor shows no sensors
-
-**Solutions**:
-1. **Run as Administrator**: Required for hardware sensor access
-2. **Check motherboard compatibility**: Some systems have limited sensor support
-3. **Update motherboard drivers**: Ensure chipset drivers are current
-4. **Enable sensors in BIOS**: Some sensors may be disabled in BIOS
-
-**Problem**: HTCP Agent not starting
-
-**Solutions**:
-1. **Check antivirus**: Some antivirus may block the executable
-2. **Run as Administrator**: May require elevated privileges
-3. **Check dependencies**: Ensure .NET runtime is installed
-4. **Firewall exceptions**: Add HTCP_Agent.exe to firewall exceptions
-
-> 📖 **For detailed agent troubleshooting**, see: [`agents/README_Agent.md`](agents/README_Agent.md)
-
-### Runtime Issues
-
-**Problem**: System monitoring shows "Connection Error"
-
-**Solutions**:
-1. **Check network connectivity**: Ping test between devices
-2. **Verify services running**: Both LibreHardwareMonitor and HTCP Agent
-3. **Check IP address changes**: HTCP may have received new IP via DHCP
-4. **Restart services**: Restart both LibreHardwareMonitor and HTCP Agent
-5. **Re-enable web server**: In LibreHardwareMonitor, disable and re-enable web server
-
-**Problem**: Remote commands not working
-
-**Solutions**:
-1. **Test HTCP Agent**: Check `http://HTCP_IP:8086/status`
-2. **Check command syntax**: Verify proper `launch_exe:` format
-3. **Path validation**: Ensure executable paths are correct and accessible
-4. **Permissions**: Some applications may require administrator privileges
-
-**Problem**: Missing temperature or fan data
-
-**Solutions**:
-1. **Hardware compatibility**: Not all systems support all sensors
-2. **Sensor availability**: Check LibreHardwareMonitor directly for available sensors
-3. **Administrative privileges**: Ensure LibreHardwareMonitor runs as administrator
-4. **Motherboard support**: Some sensors require specific motherboard chipsets
-
-### Debug Information
-
-**Enable detailed logging in HTCP Agent**:
-- Check log file: `%USERPROFILE%\htcp_agent.log`
-- System tray → Right-click → **View Log**
-
-**Check integration status**:
+### Command Execution
 ```bash
-# Via web configurator
-http://YOUR_REMOTE_IP/configurator → Integrations → HTCP → Status
-```
-
-**Test LibreHardwareMonitor API**:
-```bash
-# Device information
-curl "http://HTCP_IP:8085/data.json"
-
-# Web interface
-http://HTCP_IP:8085
-```
-
-**Test HTCP Agent API**:
-```bash
-# Health check
-curl "http://HTCP_IP:8086/health"
-
-# Status page
-http://HTCP_IP:8086/status
-
-# Send test command
-curl -X POST "http://HTCP_IP:8086/command" \
+# Example: Launch Calculator
+curl -X POST "http://localhost:8086/command" \
   -H "Content-Type: application/json" \
   -d '{"command": "custom_calc"}'
+
+# Example: Launch application
+curl -X POST "http://localhost:8086/command" \
+  -H "Content-Type: application/json" \
+  -d '{"command": "launch_exe:C:\\Program Files\\VLC\\vlc.exe"}'
 ```
 
-## 🗃️ Advanced Setup
+## 📝 Supported Commands
 
-### Static IP Configuration
+### Navigation Commands
+```
+arrow_up, arrow_down, arrow_left, arrow_right, enter, escape
+back, home, end, page_up, page_down, tab, space, delete, backspace
+```
 
-For reliable operation, configure static IP for your HTCP:
+### Media Controls
+```
+play_pause, play, pause, stop, previous, next, fast_forward
+rewind, record, volume_up, volume_down, mute
+```
 
-**Windows Network Settings**:
-1. **Control Panel** → **Network and Internet** → **Network Connections**
-2. **Right-click** your network connection → **Properties**
-3. **Select** "Internet Protocol Version 4 (TCP/IPv4)" → **Properties**
-4. **Choose** "Use the following IP address"
-5. **Configure** IP, Subnet, Gateway, DNS
+### Windows Shortcuts
+```
+windows_key, alt_tab, win_r, win_d, win_e, win_i, ctrl_shift_esc
+win_l (lock), ctrl_alt_del
+```
 
-### Startup Configuration
+### System Applications
+```
+custom_calc          # Calculator
+custom_notepad       # Notepad
+custom_cmd           # Command Prompt
+custom_powershell    # PowerShell
+```
 
-**Auto-start LibreHardwareMonitor**:
-1. **Create shortcut** to LibreHardwareMonitor.exe
-2. **Place in** Startup folder: `Win+R` → `shell:startup`
-3. **Right-click shortcut** → **Properties** → **Advanced** → **Run as administrator**
+### Web URLs
+```
+url_youtube          # Opens YouTube in default browser
+url_netflix          # Opens Netflix
+url_plex             # Opens Plex Web
+url_jellyfin         # Opens Jellyfin
+```
 
-**Auto-start HTCP Agent**:
-1. **Create shortcut** to HTCP_Agent.exe  
-2. **Place in** Startup folder: `Win+R` → `shell:startup`
-3. **Properties** → **Run**: **Minimized**
+### Power Management
+```
+power_sleep          # Sleep mode
+power_hibernate      # Hibernate
+power_shutdown       # Shutdown
+power_restart        # Restart
+```
 
-### Security Considerations
+### System Utilities
+```
+pair_bluetooth       # Open Bluetooth settings
+show_pairing_help    # Show Bluetooth help
+```
 
-**Firewall Rules**:
+### Custom Commands
+```
+launch_exe:FULL_PATH     # Launch any executable
+launch_url:URL           # Open any URL
+set_volume:0-100         # Set system volume
+mute_toggle             # Toggle system mute
+```
+
+## 🔍 Troubleshooting
+
+### Agent Won't Start
+
+**Problem**: Double-clicking does nothing or shows error
+
+**Solutions**:
+1. **Check dependencies**: Ensure all required DLLs are present
+2. **Run as Administrator**: Right-click → "Run as administrator"
+3. **Check antivirus**: Add HTCP_Agent.exe to antivirus exclusions
+4. **Windows compatibility**: Ensure Windows 10/11 compatibility
+
+**Check log file**:
+```
+%USERPROFILE%\htcp_agent.log
+```
+
+### Port 8086 In Use
+
+**Problem**: Agent fails to start due to port conflict
+
+**Solutions**:
+1. **Find conflicting process**:
+   ```bash
+   netstat -ano | findstr :8086
+   tasklist | findstr PID_NUMBER
+   ```
+2. **Stop conflicting service**
+3. **Check for multiple agent instances**
+
+### Commands Not Working
+
+**Problem**: Remote commands fail to execute
+
+**Solutions**:
+1. **Test locally**:
+   ```bash
+   curl -X POST "http://localhost:8086/command" -H "Content-Type: application/json" -d '{"command": "custom_calc"}'
+   ```
+2. **Check log file** for error messages
+3. **Verify command syntax** (case-sensitive)
+4. **Test with simple commands** first (like `custom_calc`)
+
+### Network Connectivity
+
+**Problem**: Integration can't reach agent
+
+**Solutions**:
+1. **Test from integration host**:
+   ```bash
+   curl http://HTCP_IP:8086/health
+   ```
+2. **Check firewall settings**
+3. **Verify agent is running** (system tray icon)
+4. **Test with browser**: `http://HTCP_IP:8086/status`
+
+## 📊 Log Files
+
+### Log Location
+```
+%USERPROFILE%\htcp_agent.log
+```
+
+### Log Levels
+- **INFO**: Normal operation events
+- **WARNING**: Non-critical issues
+- **ERROR**: Command failures and errors
+- **DEBUG**: Detailed execution information
+
+### Example Log Entries
+```
+2025-01-16 10:30:15 - INFO - HTCP Agent started on port 8086
+2025-01-16 10:30:16 - INFO - Web interface available at http://localhost:8086/status
+2025-01-16 10:35:22 - INFO - Command executed: custom_calc
+2025-01-16 10:35:25 - ERROR - Failed to execute: launch_exe:invalid_path.exe
+```
+
+## 🔒 Security Considerations
+
+### Network Security
+- **Use only on trusted networks**: Agent has no authentication
+- **Firewall protection**: Ensure only local network access
+- **Regular updates**: Keep Windows and agent updated
+
+### Command Limitations
+- **No system-level commands**: Agent runs in user context
+- **No file system access**: Cannot read/write arbitrary files
+- **Predefined commands only**: Cannot execute arbitrary code
+- **Process isolation**: Commands run in separate processes
+
+### Best Practices
+1. **Dedicated user account**: Run agent under limited user account
+2. **Network segmentation**: Use VLAN isolation if possible
+3. **Regular monitoring**: Check log files for suspicious activity
+4. **Firewall rules**: Restrict access to specific IP ranges
+
+## 🛠️ Advanced Configuration
+
+### Custom Command Extension
+
+To add custom commands, modify the agent source code (`htcp_agent.py`):
+
+```python
+def handle_custom_command(self, command):
+    """Add your custom command handling here"""
+    if command == "my_custom_app":
+        subprocess.run(["C:\\Path\\To\\MyApp.exe"])
+        return True
+    return False
+```
+
+### Service Installation
+
+For production environments, consider installing as Windows service:
+
 ```bash
-# Windows Firewall - Allow incoming connections
-netsh advfirewall firewall add rule name="LibreHardwareMonitor" dir=in action=allow protocol=TCP localport=8085
-netsh advfirewall firewall add rule name="HTCP Agent" dir=in action=allow protocol=TCP localport=8086
+# Using NSSM (Non-Sucking Service Manager)
+nssm install HTCPAgent "C:\HTCP_Agent\HTCP_Agent.exe"
+nssm set HTCPAgent DisplayName "HTCP Agent Service"
+nssm set HTCPAgent Description "HTPC Integration Command Agent"
+nssm start HTCPAgent
 ```
 
-**Network Security**:
-- Use only on trusted local networks
-- Consider VPN access for remote monitoring
-- Regularly update Windows and applications
+## 📈 Performance
 
-## 🤝 Contributing
+### Resource Usage
+- **Memory**: ~10-15 MB typical usage
+- **CPU**: Minimal (event-driven)
+- **Network**: HTTP requests only
+- **Disk**: Log file growth minimal
 
-### Development Setup
+### Scaling Considerations
+- **Single instance**: One agent per Windows machine
+- **Concurrent commands**: Queued execution
+- **Response time**: Sub-second for most commands
 
-```bash
-# Clone repository
-git clone https://github.com/mase1981/uc-intg-htpc.git
-cd uc-intg-htpc
+## 🔄 Updates
 
-# Create virtual environment
-python -m venv venv
-venv\Scripts\activate  # Windows
+### Update Process
+1. **Stop current agent**: Right-click tray → Quit
+2. **Replace executable**: Overwrite HTCP_Agent.exe
+3. **Restart agent**: Double-click new executable
+4. **Verify operation**: Check system tray and test commands
 
-# Install dependencies
-pip install -r requirements.txt
-```
+### Version Checking
+- **System tray**: Right-click → About
+- **Web interface**: `http://localhost:8086/status`
+- **Log file**: Version logged on startup
 
-### Building HTCP Agent
+## 📞 Support
 
-```bash
-# Install PyInstaller
-pip install pyinstaller
+### Troubleshooting Steps
+1. **Check system tray** for agent icon
+2. **Review log file** for errors
+3. **Test web interface** locally
+4. **Verify firewall settings**
+5. **Test simple commands** first
 
-# Build executable
-pyinstaller --onefile --windowed --name "HTCP_Agent" --version-file="version_info.txt" htcp_agent.py
-```
-
-### Testing
-
-```bash
-# Run integration directly
-python -m uc_intg_htcp.driver
-
-# Test with debug logging
-UC_INTEGRATION_HTTP_PORT=9090 python uc_intg_htcp/driver.py
-```
-
-## 📄 License
-
-This project is licensed under the MPL-2.0 License - see the [LICENSE](LICENSE) file for details.
-
-## 🆘 Support
-
-### Community Resources
-
-- **GitHub Issues**: [Report bugs and request features](https://github.com/mase1981/uc-intg-htpc/issues)
-- **UC Community Forum**: [General discussion and support](https://unfolded.community/)
-- **LibreHardwareMonitor**: [Official sensor monitoring support](https://github.com/LibreHardwareMonitor/LibreHardwareMonitor)
-
-### Professional Support
-
-For enterprise deployments or professional integration services, contact the development team through GitHub.
+### Getting Help
+- **GitHub Issues**: Report bugs and issues
+- **Log files**: Include relevant log entries
+- **System information**: Windows version, antivirus software
+- **Network details**: Firewall configuration, network topology
 
 ---
 
-**Made with ❤️ for the Unfolded Circle Community**
+**HTCP Agent v1.0** - Part of the HTPC System Monitor Integration  
+**Compatibility**: Windows 10/11  
+**License**: MPL-2.0  
 
-*Transform your HTCP into a smart, monitored, and fully controllable entertainment center with your Remote Two/3!*
-
-**Author**: Meir Miyara
+*Secure, lightweight command execution for your HTPC remote control needs.*
