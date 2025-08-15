@@ -58,7 +58,7 @@ class HTCPMediaPlayer(MediaPlayer):
 
         super().__init__(
             identifier="htcp_monitor",
-            name="HTPC System Monitor",
+            name="HTCP System Monitor",
             features=features,
             attributes=attributes,
             cmd_handler=self._handle_command,
