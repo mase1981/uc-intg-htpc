@@ -1,0 +1,66 @@
+[build-system]
+requires = ["setuptools>=65.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "uc-intg-htpc"
+version = "0.1.0"
+description = "HTPC System Monitor Integration for Unfolded Circle Remote"
+authors = [
+    {name = "Meir Miyara", email = "meir.miyara@gmail.com"}
+]
+readme = "README.md"
+license = {text = "MPL-2.0"}
+requires-python = ">=3.11"
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: End Users/Desktop",
+    "License :: OSI Approved :: Mozilla Public License 2.0 (MPL 2.0)",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Home Automation",
+    "Topic :: System :: Monitoring"
+]
+dependencies = [
+    "ucapi>=0.3.1",
+    "aiohttp>=3.8.0",
+    "certifi>=2023.5.7"
+]
+
+[project.optional-dependencies]
+dev = [
+    "pylint",
+    "black",
+    "isort",
+    "pytest",
+    "pytest-asyncio"
+]
+
+[project.urls]
+"Homepage" = "https://github.com/mase1981/uc-intg-htpc"
+"Documentation" = "https://github.com/mase1981/uc-intg-htpc/blob/main/README.md"
+"Source" = "https://github.com/mase1981/uc-intg-htpc"
+"Bug Reports" = "https://github.com/mase1981/uc-intg-htpc/issues"
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["uc_intg_htpc*"]
+
+[tool.black]
+line-length = 120
+target-version = ['py311']
+
+[tool.isort]
+profile = "black"
+line_length = 120
+
+[tool.pylint.format]
+max-line-length = 120
+
+[tool.pylint.messages_control]
+disable = [
+    "too-few-public-methods",
+    "too-many-arguments",
+    "too-many-instance-attributes"
+]

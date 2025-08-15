@@ -1,0 +1,83 @@
+{
+    "driver_id": "uc_intg_htpc",
+    "version": "0.1.0",
+    "min_core_api": "0.21.0",
+    "name": {
+        "en": "HTPC System Monitor",
+        "de": "HTPC System Monitor",
+        "fr": "Moniteur Système HTPC"
+    },
+    "description": {
+        "en": "Monitor HTPC system performance and control media applications via LibreHardwareMonitor and Bluetooth",
+        "de": "Überwachen Sie die HTPC-Systemleistung und steuern Sie Medienanwendungen über LibreHardwareMonitor und Bluetooth",
+        "fr": "Surveiller les performances du système HTPC et contrôler les applications multimédias via LibreHardwareMonitor et Bluetooth"
+    },
+    "developer": {
+        "name": "Meir Miyara",
+        "email": "meir.miyara@gmail.com",
+        "url": "https://github.com/mase1981"
+    },
+    "home_page": "https://github.com/mase1981/uc-intg-htpc",
+    "documentation": "https://github.com/mase1981/uc-intg-htpc/blob/main/README.md",
+    "setup_data_schema": {
+        "title": {
+            "en": "HTPC System Monitor Setup",
+            "de": "HTPC System Monitor Einrichtung",
+            "fr": "Configuration Moniteur Système HTPC"
+        },
+        "settings": [
+            {
+                "id": "host",
+                "label": {
+                    "en": "HTPC IP Address",
+                    "de": "HTPC IP-Adresse",
+                    "fr": "Adresse IP HTPC"
+                },
+                "field": {
+                    "text": {
+                        "value": ""
+                    }
+                }
+            },
+            {
+                "id": "temperature_unit",
+                "label": {
+                    "en": "Temperature Unit",
+                    "de": "Temperatureinheit",
+                    "fr": "Unité de température"
+                },
+                "field": {
+                    "dropdown": {
+                        "value": "celsius",
+                        "items": [
+                            {
+                                "id": "celsius",
+                                "label": {
+                                    "en": "Celsius (°C)",
+                                    "de": "Celsius (°C)",
+                                    "fr": "Celsius (°C)"
+                                }
+                            },
+                            {
+                                "id": "fahrenheit",
+                                "label": {
+                                    "en": "Fahrenheit (°F)",
+                                    "de": "Fahrenheit (°F)",
+                                    "fr": "Fahrenheit (°F)"
+                                }
+                            }
+                        ]
+                    }
+                }
+            }
+        ]
+    },
+    "release_date": "2025-01-16",
+    "icon": "uc:computer",
+    "enabled": true,
+    "port": 9090,
+    "mdns": {
+        "name": "HTPC System Monitor",
+        "mdns_type": "_uc-integration._tcp.local."
+    }
+}
