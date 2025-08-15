@@ -16,12 +16,20 @@ _LOG = logging.getLogger(__name__)
 class HTCPConfig:
     """Configuration manager for HTCP integration."""
 
-    def __init__(self, config_dir: str = "./"):
+    def __init__(self, config_dir: str = None):
         """
         Initialize configuration manager.
         
         :param config_dir: configuration directory path
         """
+        if config_dir is None:
+            # Use UC_CONFIG_HOME environment variable or fall back to /tmp
+            config_dir = (
+                os.getenv("UC_CONFIG_HOME") or 
+                os.getenv("HOME") or 
+                "/tmp"
+            )
+        
         self._config_dir = config_dir
         self._config_file = os.path.join(config_dir, "config.json")
         self._config: Dict[str, Any] = {}
@@ -49,18 +57,28 @@ class HTCPConfig:
         """
         try:
             os.makedirs(self._config_dir, exist_ok=True)
+            
+            test_file = os.path.join(self._config_dir, ".write_test")
+            try:
+                with open(test_file, "w") as f:
+                    f.write("test")
+                os.remove(test_file)
+            except (OSError, IOError) as e:
+                _LOG.error("Config directory not writable (%s): %s", self._config_dir, e)
+                return False  # Fail if we can't save config
+            
             with open(self._config_file, "w", encoding="utf-8") as file:
                 json.dump(self._config, file, indent=2)
             _LOG.info("Configuration saved to %s", self._config_file)
             return True
         except Exception as ex:
-            _LOG.error("Failed to save configuration: %s", ex)
-            return False
+            _LOG.error("Failed to save configuration to %s: %s", self._config_file, ex)
+            return False  # Fail setup if config can't be saved
 
     def _default_config(self) -> Dict[str, Any]:
         """Get default configuration."""
         return {
-            "host": "192.168.1.100",
+            "host": "",
             "port": 8085,
             "temperature_unit": "celsius"
         }
