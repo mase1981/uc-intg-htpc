@@ -85,7 +85,7 @@ ehthumbs.db
 Thumbs.db
 
 # Integration specific
-HTPC_Agent.exe
 artifacts/
 test_librehardwaremonitor.py
 version_info.txt
+htpc_agent.py

@@ -5,7 +5,7 @@
 
 Custom HTPC system monitoring and control integration for your Unfolded Circle Remote Two/3. Transform your remote into a powerful HTPC command center with real-time system monitoring and comprehensive Windows control.
 
-**NOTE:** This integration requires two components: LibreHardwareMonitor (free) running on your HTPC and the HTPC Agent (provided).
+**NOTE:** This integration requires two components: LibreHardwareMonitor (free) running on your HTPC and the HTPC Agent (included).
 
 ## 🖥️ Features
 
@@ -49,8 +49,9 @@ Custom HTPC system monitoring and control integration for your Unfolded Circle R
    - Version: Latest release
    - Purpose: System sensor data collection
 
-2. **HTPC Agent** (Provided with integration)
-   - File: `HTPC_Agent.exe`
+2. **HTPC Agent** (Included with integration)
+   - File: `agents/HTCP_Agent.exe`
+   - Documentation: `agents/README_Agent.md`
    - Purpose: Windows command execution and control
 
 #### Network Requirements
@@ -75,11 +76,13 @@ Custom HTPC system monitoring and control integration for your Unfolded Circle R
 5. **Verify**: Open browser to `http://localhost:8085/data.json` - should show sensor data
 
 #### Install HTPC Agent
-1. **Download** `HTPC_Agent.exe` from integration package
-2. **Place** in a permanent location (e.g., `C:\HTPC_Agent\`)
-3. **Run** `HTPC_Agent.exe` - will appear in system tray
-4. **Verify**: Check system tray for HTPC Agent icon
+1. **Download** `agents/HTCP_Agent.exe` from this repository
+2. **Place** in a permanent location (e.g., `C:\HTCP_Agent\`)
+3. **Run** `HTCP_Agent.exe` - will appear in system tray
+4. **Verify**: Check system tray for HTCP Agent icon
 5. **Test**: Right-click tray icon → **Status & Control** → should open web interface
+
+> 📖 **For detailed agent setup and troubleshooting**, see: [`agents/README_Agent.md`](agents/README_Agent.md)
 
 ### Step 2: Configure Network
 **NOTE**: It is best and ideal to give your PC a static IP via your router reservation, the below are instructions for users to find their PC IP, however it is best to simply give it a static IP.
@@ -186,7 +189,7 @@ launch_exe:"C:\Users\%USERNAME%\AppData\Local\Plex\Plex.exe"
 launch_exe:"C:\Program Files\Google\Chrome\Application\chrome.exe"
 
 # Launch Kodi
-launch_exe:"C:\Program Files\Kodi\kodi.exe
+launch_exe:"C:\Program Files\Kodi\kodi.exe"
 
 # Launch OBS Studio
 launch_exe:"C:\Program Files\obs-studio\bin\64bit\obs64.exe"
@@ -246,6 +249,8 @@ The HTPC Agent provides system tray management:
 - **View Log**: Opens log file for troubleshooting
 - **Quit**: Stops the agent
 
+> 📖 **For comprehensive agent documentation**, see: [`agents/README_Agent.md`](agents/README_Agent.md)
+
 ## 🛠️ Troubleshooting
 
 ### Setup Issues
@@ -284,7 +289,9 @@ The HTPC Agent provides system tray management:
 1. **Check antivirus**: Some antivirus may block the executable
 2. **Run as Administrator**: May require elevated privileges
 3. **Check dependencies**: Ensure Python runtime dependencies are met
-4. **Firewall exceptions**: Add HTPC_Agent.exe to firewall exceptions
+4. **Firewall exceptions**: Add HTCP_Agent.exe to firewall exceptions
+
+> 📖 **For detailed agent troubleshooting**, see: [`agents/README_Agent.md`](agents/README_Agent.md)
 
 ### Runtime Issues
 
@@ -299,7 +306,7 @@ The HTPC Agent provides system tray management:
 **Problem**: Remote commands not working
 
 **Solutions**:
-1. **Test HTCP Agent**: Check `http://HTPC_IP:8086/status`
+1. **Test HTCP Agent**: Check `http://HTCP_IP:8086/status`
 2. **Check command syntax**: Verify proper `launch_exe:` format
 3. **Path validation**: Ensure executable paths are correct and accessible
 4. **Permissions**: Some applications may require administrator privileges
@@ -315,7 +322,7 @@ The HTPC Agent provides system tray management:
 ### Debug Information
 
 **Enable detailed logging in HTCP Agent**:
-- Check log file: `%USERPROFILE%\htpc_agent.log`
+- Check log file: `%USERPROFILE%\htcp_agent.log`
 - System tray → Right-click → **View Log**
 
 **Check integration status**:
@@ -327,27 +334,27 @@ http://YOUR_REMOTE_IP/configurator → Integrations → HTPC → Status
 **Test LibreHardwareMonitor API**:
 ```bash
 # Device information
-curl "http://HTPC_IP:8085/data.json"
+curl "http://HTCP_IP:8085/data.json"
 
 # Web interface
-http://HTPC_IP:8085
+http://HTCP_IP:8085
 ```
 
 **Test HTCP Agent API**:
 ```bash
 # Health check
-curl "http://HTPC_IP:8086/health"
+curl "http://HTCP_IP:8086/health"
 
 # Status page
-http://HTPC_IP:8086/status
+http://HTCP_IP:8086/status
 
 # Send test command
-curl -X POST "http://HTPC_IP:8086/command" \
+curl -X POST "http://HTCP_IP:8086/command" \
   -H "Content-Type: application/json" \
   -d '{"command": "custom_calc"}'
 ```
 
-## 🏗️ Advanced Setup
+## 🗃️ Advanced Setup
 
 ### Static IP Configuration
 
@@ -368,7 +375,7 @@ For reliable operation, configure static IP for your HTPC:
 3. **Right-click shortcut** → **Properties** → **Advanced** → **Run as administrator**
 
 **Auto-start HTPC Agent**:
-1. **Create shortcut** to HTPC_Agent.exe  
+1. **Create shortcut** to HTCP_Agent.exe  
 2. **Place in** Startup folder: `Win+R` → `shell:startup`
 3. **Properties** → **Run**: **Minimized**
 
