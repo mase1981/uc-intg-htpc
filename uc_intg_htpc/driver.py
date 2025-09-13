@@ -45,17 +45,36 @@ async def setup_handler(msg: SetupAction) -> SetupAction:
         
     if isinstance(action, SetupComplete):
         _LOG.info("Setup confirmed. Initializing integration components...")
+        await _initialize_entities()
+    
+    return action
+
+
+async def _initialize_entities():
+    """Initialize entities after successful setup or connection."""
+    global _config, _client, _media_player, _remote, api
+    
+    if not _config.host:
+        _LOG.info("HTCP not configured, skipping entity initialization")
+        return
+        
+    _LOG.info("Initializing HTCP entities...")
+    
+    try:
         _client = HTCPClient(_config)
         
         _media_player = HTCPMediaPlayer(_client, _config, api)
         _remote = HTCPRemote(_client, _config, api)
         
+        # Clear existing entities and add new ones
+        api.available_entities.clear()
         api.available_entities.add(_media_player)
         api.available_entities.add(_remote)
         
         _LOG.info("HTPC entities are created and available.")
-    
-    return action
+        
+    except Exception as e:
+        _LOG.error("Failed to initialize entities: %s", e)
 
 
 async def start_monitoring_loop():
@@ -64,14 +83,28 @@ async def start_monitoring_loop():
     if _monitoring_task is None or _monitoring_task.done():
         if _client and _client.is_connected:
             _monitoring_task = asyncio.create_task(_media_player.run_monitoring())
-            _LOG.info("HTPC monitoring task started.")
+            _LOG.info("HTCP monitoring task started.")
 
 
 async def on_connect() -> None:
-    """Handle Remote Two connection."""
+    """Handle Remote Two connection with reboot survival."""
+    global _config
+    
     _LOG.info("Remote Two connected. Setting device state to CONNECTED.")
+    
+    # CRITICAL FIX: Reload configuration from disk for reboot survival
+    if not _config:
+        _config = HTCPConfig()
+    _config.load()  # This was missing!
+    
+    # Check if entities exist, recreate if missing
+    if _config.host and (not api.available_entities or len(list(api.available_entities)) == 0):
+        _LOG.info("Configuration found but entities missing, reinitializing...")
+        await _initialize_entities()
+    
     await api.set_device_state(DeviceStates.CONNECTED)
     
+    # Try to connect to HTCP if not already connected
     if _client and not _client.is_connected:
         if await _client.connect():
             _LOG.info("Successfully connected to LibreHardwareMonitor.")

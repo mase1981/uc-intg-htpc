@@ -2,6 +2,9 @@
 
 [![GitHub Release](https://img.shields.io/github/release/mase1981/uc-intg-htpc.svg)](https://github.com/mase1981/uc-intg-htpc/releases)
 [![GitHub License](https://img.shields.io/github/license/mase1981/uc-intg-htpc.svg)](https://github.com/mase1981/uc-intg-htpc/blob/main/LICENSE)
+ [![Buy Me A Coffee](https://img.shields.io/badge/buy%20me%20a%20coffee-donate-yellow.svg)](https://buymeacoffee.com/meirmiyara)
+[![PayPal](https://img.shields.io/badge/PayPal-donate-blue.svg)](https://paypal.me/mmiyara)
+[![Github Sponsors](https://img.shields.io/badge/GitHub%20Sponsors-30363D?&logo=GitHub-Sponsors&logoColor=EA4AAA)](https://github.com/sponsors/mase1981/button)
 
 Custom HTPC system monitoring and control integration for your Unfolded Circle Remote Two/3. Transform your remote into a powerful HTPC command center with real-time system monitoring and comprehensive Windows control.
 
