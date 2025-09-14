@@ -92,19 +92,16 @@ async def on_connect() -> None:
     
     _LOG.info("Remote Two connected. Setting device state to CONNECTED.")
     
-    # CRITICAL FIX: Reload configuration from disk for reboot survival
     if not _config:
         _config = HTCPConfig()
-    _config.load()  # This was missing!
+    _config._load_config()  # Reload config from disk
     
-    # Check if entities exist, recreate if missing
     if _config.host and (not api.available_entities or len(list(api.available_entities)) == 0):
         _LOG.info("Configuration found but entities missing, reinitializing...")
         await _initialize_entities()
     
     await api.set_device_state(DeviceStates.CONNECTED)
     
-    # Try to connect to HTCP if not already connected
     if _client and not _client.is_connected:
         if await _client.connect():
             _LOG.info("Successfully connected to LibreHardwareMonitor.")
