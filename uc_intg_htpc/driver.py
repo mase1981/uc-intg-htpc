@@ -96,7 +96,8 @@ async def on_connect() -> None:
         _config = HTCPConfig()
     _config._load_config()  # Reload config from disk
     
-    if _config.host and (not api.available_entities or len(list(api.available_entities)) == 0):
+    # Check if entities exist, recreate if missing
+    if _config.host and not api.available_entities:
         _LOG.info("Configuration found but entities missing, reinitializing...")
         await _initialize_entities()
     
