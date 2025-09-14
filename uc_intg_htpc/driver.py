@@ -19,7 +19,6 @@ from uc_intg_htpc.setup import HTCPSetup
 
 _LOG = logging.getLogger(__name__)
 
-# Global integration components
 api: ucapi.IntegrationAPI | None = None
 _config: HTCPConfig | None = None
 _client: HTCPClient | None = None
@@ -68,7 +67,6 @@ async def _initialize_entities():
         _LOG.info("Initializing HTCP entities...")
         
         try:
-            # Create client
             _client = HTCPClient(_config)
             
             _media_player = HTCPMediaPlayer(_client, _config, api)
@@ -139,6 +137,7 @@ async def on_subscribe_entities(entity_ids: list[str]):
     """Handle entity subscriptions with race condition protection."""
     _LOG.info(f"Entities subscription requested: {entity_ids}")
     
+    # Guard against race condition
     if not _entities_ready:
         _LOG.error("RACE CONDITION: Subscription before entities ready! Attempting recovery...")
         if _config and _config.host:
@@ -147,8 +146,13 @@ async def on_subscribe_entities(entity_ids: list[str]):
             _LOG.error("Cannot recover - no configuration available")
             return
     
-    available_ids = [entity.id for entity in api.available_entities.get_all()]
-    _LOG.info(f"Available entities: {available_ids}")
+    available_entity_ids = []
+    if _media_player:
+        available_entity_ids.append(_media_player.id)
+    if _remote:
+        available_entity_ids.append(_remote.id)
+    
+    _LOG.info(f"Available entities: {available_entity_ids}")
     
     for entity_id in entity_ids:
         if _media_player and entity_id == _media_player.id:
