@@ -178,16 +178,16 @@ class HTCPRemote(Remote):
         
         if self._config.wol_enabled:
             items.extend([
-                create_ui_icon("uc:power", 0, 0, cmd="power_on"),
-                create_ui_icon("uc:moon", 1, 0, cmd="power_sleep"),
+                create_ui_text("PowerOn", 0, 0, cmd="power_on"),
+                create_ui_text("Sleep", 1, 0, cmd="power_sleep"),
                 create_ui_text("Hibernate", 2, 0, cmd="power_hibernate"),
-                create_ui_text("Shutdown", 3, 0, cmd="power_shutdown"),
+                create_ui_text("PowerOff", 3, 0, cmd="power_shutdown"),
             ])
         else:
             items.extend([
-                create_ui_icon("uc:moon", 0, 0, cmd="power_sleep"),
+                create_ui_text("Sleep", 0, 0, cmd="power_sleep"),
                 create_ui_text("Hibernate", 1, 0, cmd="power_hibernate"),
-                create_ui_text("Shutdown", 2, 0, cmd="power_shutdown"),
+                create_ui_text("PowerOff", 2, 0, cmd="power_shutdown"),
                 create_ui_text("Restart", 3, 0, cmd="power_restart"),
             ])
         
