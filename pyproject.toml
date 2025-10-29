@@ -1,51 +1,60 @@
 [build-system]
-requires = ["setuptools>=65.0", "wheel"]
+requires = ["setuptools>=65.0.0", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [project]
 name = "uc-intg-htpc"
-version = "0.1.12"
-description = "HTPC System Monitor Integration for Unfolded Circle Remote"
-authors = [
-    {name = "Meir Miyara", email = "meir.miyara@gmail.com"}
-]
+dynamic = ["version"]
+description = "HTPC System Monitor Integration for Unfolded Circle Remote Two/3"
 readme = "README.md"
-license = {text = "MPL-2.0"}
 requires-python = ">=3.11"
+license = { text = "MPL-2.0" }
+authors = [
+    { name = "Meir Miyara", email = "meir.miyara@gmail.com" }
+]
+keywords = ["unfoldedcircle", "integration", "htpc", "librehardwaremonitor", "system-monitor"]
 classifiers = [
-    "Development Status :: 3 - Alpha",
+    "Development Status :: 4 - Beta",
     "Intended Audience :: End Users/Desktop",
-    "License :: OSI Approved :: Mozilla Public License 2.0 (MPL 2.0)",
+    "License :: OSI Approved :: Mozilla Public License 2.0 (MPL-2.0)",
     "Operating System :: OS Independent",
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
     "Topic :: Home Automation",
-    "Topic :: System :: Monitoring"
+    "Topic :: System :: Monitoring",
 ]
+
 dependencies = [
     "ucapi>=0.3.1",
     "aiohttp>=3.8.0",
-    "certifi>=2023.5.7"
+    "certifi>=2023.5.7",
+    "wakeonlan>=3.0.0",
 ]
 
 [project.optional-dependencies]
 dev = [
-    "pylint",
-    "black",
-    "isort",
-    "pytest",
-    "pytest-asyncio"
+    "pytest>=7.4.0",
+    "pytest-asyncio>=0.21.0",
+    "black>=23.7.0",
+    "isort>=5.12.0",
+    "flake8>=6.1.0",
+    "pylint>=2.17.5",
 ]
 
 [project.urls]
-"Homepage" = "https://github.com/mase1981/uc-intg-htpc"
-"Documentation" = "https://github.com/mase1981/uc-intg-htpc/blob/main/README.md"
-"Source" = "https://github.com/mase1981/uc-intg-htpc"
-"Bug Reports" = "https://github.com/mase1981/uc-intg-htpc/issues"
+Homepage = "https://github.com/mase1981/uc-intg-htpc"
+Documentation = "https://github.com/mase1981/uc-intg-htpc/blob/main/README.md"
+Repository = "https://github.com/mase1981/uc-intg-htpc"
+Issues = "https://github.com/mase1981/uc-intg-htpc/issues"
 
-[tool.setuptools.packages.find]
-where = ["."]
-include = ["uc_intg_htpc*"]
+[tool.setuptools]
+packages = ["uc_intg_htpc"]
+
+[tool.setuptools.package-data]
+uc_intg_htpc = ["icons/*.png"]
+
+[tool.setuptools.dynamic]
+version = {attr = "uc_intg_htpc.__version__"}
 
 [tool.black]
 line-length = 120
@@ -62,5 +71,5 @@ max-line-length = 120
 disable = [
     "too-few-public-methods",
     "too-many-arguments",
-    "too-many-instance-attributes"
+    "too-many-instance-attributes",
 ]

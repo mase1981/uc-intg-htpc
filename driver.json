@@ -1,6 +1,6 @@
 {
     "driver_id": "uc_intg_htpc",
-    "version": "0.1.12",
+    "version": "0.2.0",
     "min_core_api": "0.21.0",
     "name": {
         "en": "HTPC System Monitor",
@@ -67,6 +67,19 @@
                                 }
                             }
                         ]
+                    }
+                }
+            },
+            {
+                "id": "mac_address",
+                "label": {
+                    "en": "MAC Address (Optional - for Wake-on-LAN)",
+                    "de": "MAC-Adresse (Optional - für Wake-on-LAN)",
+                    "fr": "Adresse MAC (Optionnel - pour Wake-on-LAN)"
+                },
+                "field": {
+                    "text": {
+                        "value": ""
                     }
                 }
             }

@@ -16,7 +16,6 @@ from uc_intg_htpc.config import HTCPConfig
 _LOG = logging.getLogger(__name__)
 
 class HTCPRemote(Remote): 
-    """Remote entity for comprehensive HTPC control with reliable commands only."""
 
     def __init__(self, client: HTCPClient, config: HTCPConfig, api: IntegrationAPI):
         self._client = client
@@ -24,34 +23,22 @@ class HTCPRemote(Remote):
         self._api = api
         
         simple_commands = [ 
-            # Navigation keys
             "arrow_up", "arrow_down", "arrow_left", "arrow_right", "enter", "escape", 
             "back", "home", "end", "page_up", "page_down", "tab", "space", "delete", 
             "backspace",
-            
-            # Media controls
             "play_pause", "play", "pause", "stop", "previous", "next", "fast_forward", 
             "rewind", "record", "volume_up", "volume_down", "mute",
-            
-            # Function keys
             "f1", "f2", "f3", "f4", "f5", "f6", "f7", "f8", "f9", "f10", "f11", "f12",
-            
-            # Windows shortcuts
             "windows_key", "alt_tab", "win_r", "win_d", "win_e", "win_i", 
             "ctrl_shift_esc",
-            
-            # System utilities
             "custom_calc", "custom_notepad", "custom_cmd", "custom_powershell",
-            
-            # Web URLs
             "url_youtube", "url_netflix", "url_plex", "url_jellyfin",
-            
-            # Power management
             "power_sleep", "power_hibernate", "power_shutdown", "power_restart",
-            
-            # System utilities
             "pair_bluetooth", "show_pairing_help"
         ]
+        
+        if config.wol_enabled:
+            simple_commands.append("power_on")
         
         nav_page = self._create_navigation_page()
         media_page = self._create_media_page()
@@ -61,7 +48,7 @@ class HTCPRemote(Remote):
         power_page = self._create_power_system_page()
 
         super().__init__(
-            identifier="htcp_remote",
+            identifier="htpc_remote",
             name={"en": "HTPC Advanced Remote"},
             features=[Features.SEND_CMD],
             attributes={
@@ -73,7 +60,6 @@ class HTCPRemote(Remote):
         )
 
     def _create_navigation_page(self) -> UiPage:
-        """Create navigation page with directional controls."""
         page = UiPage(page_id="navigation", name="Navigation")
         page.items.extend([
             create_ui_icon("uc:arrow-up", 1, 0, cmd="arrow_up"),
@@ -96,7 +82,6 @@ class HTCPRemote(Remote):
         return page
         
     def _create_media_page(self) -> UiPage:
-        """Create media controls page."""
         page = UiPage(page_id="media", name="Media Controls")
         page.items.extend([
             create_ui_icon("uc:rewind", 0, 0, cmd="rewind"),
@@ -122,7 +107,6 @@ class HTCPRemote(Remote):
         return page
 
     def _create_windows_shortcuts_page(self) -> UiPage:
-        """Create Windows shortcuts page."""
         page = UiPage(page_id="windows", name="Windows Shortcuts")
         page.items.extend([
             create_ui_icon("uc:home", 0, 0, cmd="windows_key"),
@@ -143,7 +127,6 @@ class HTCPRemote(Remote):
         return page
 
     def _create_system_tools_page(self) -> UiPage:
-        """Create system tools page with guaranteed working apps."""
         page = UiPage(page_id="system_tools", name="System Tools")
         page.items.extend([
             create_ui_text("Calculator", 0, 0, cmd="custom_calc"),
@@ -164,7 +147,6 @@ class HTCPRemote(Remote):
         return page
         
     def _create_function_keys_page(self) -> UiPage:
-        """Create function keys page."""
         page = UiPage(page_id="function_keys", name="Function Keys")
         page.items.extend([
             create_ui_text("F1", 0, 0, cmd="f1"),
@@ -190,23 +172,36 @@ class HTCPRemote(Remote):
         return page
         
     def _create_power_system_page(self) -> UiPage:
-        """Create power management page."""
         page = UiPage(page_id="power", name="Power & System")
-        page.items.extend([
-            create_ui_icon("uc:power", 0, 0, cmd="power_sleep"),
-            create_ui_text("Hibernate", 1, 0, cmd="power_hibernate"),
-            create_ui_text("Shutdown", 2, 0, cmd="power_shutdown"),
-            create_ui_text("Restart", 3, 0, cmd="power_restart"),
-            
+        
+        items = []
+        
+        if self._config.wol_enabled:
+            items.extend([
+                create_ui_icon("uc:power", 0, 0, cmd="power_on"),
+                create_ui_icon("uc:moon", 1, 0, cmd="power_sleep"),
+                create_ui_text("Hibernate", 2, 0, cmd="power_hibernate"),
+                create_ui_text("Shutdown", 3, 0, cmd="power_shutdown"),
+            ])
+        else:
+            items.extend([
+                create_ui_icon("uc:moon", 0, 0, cmd="power_sleep"),
+                create_ui_text("Hibernate", 1, 0, cmd="power_hibernate"),
+                create_ui_text("Shutdown", 2, 0, cmd="power_shutdown"),
+                create_ui_text("Restart", 3, 0, cmd="power_restart"),
+            ])
+        
+        items.extend([
             create_ui_text("Settings", 0, 1, cmd="win_i"),
             create_ui_text("Task Mgr", 1, 1, cmd="ctrl_shift_esc"),
             create_ui_text("Run Dialog", 2, 1, cmd="win_r"),
             create_ui_text("Desktop", 3, 1, cmd="win_d"),
         ])
+        
+        page.items.extend(items)
         return page
 
     async def handle_command(self, entity_arg: entity.Entity, cmd_id: str, params: dict | None) -> StatusCodes:
-        """Handle all commands sent to the remote entity."""
         _LOG.info(f"HTCPRemote received command: {cmd_id} with params: {params}")
         
         if cmd_id == Commands.SEND_CMD:
@@ -237,10 +232,11 @@ class HTCPRemote(Remote):
         return StatusCodes.BAD_REQUEST
 
     async def _execute_command(self, command: str) -> bool:
-        """Execute a command."""
         _LOG.info(f"Executing command: {command}")
         
-        if command.startswith("launch_exe:"):
+        if command == "power_on":
+            return await self._client.power_on_wol()
+        elif command.startswith("launch_exe:"):
             return await self._client.send_remote_command(command)
         elif command.startswith("launch_url:"):
             return await self._client.send_remote_command(command)
@@ -248,7 +244,6 @@ class HTCPRemote(Remote):
             return await self._client.send_remote_command(command)
 
     async def push_update(self):
-        """Push the current state of the remote entity."""
         if self._api.configured_entities.contains(self.id):
             attrs_to_update = {
                 Attributes.STATE: States.ON

@@ -15,6 +15,7 @@ from typing import Any, Dict, List, Optional
 
 import aiohttp
 import certifi
+from wakeonlan import send_magic_packet
 
 from uc_intg_htpc.config import HTCPConfig
 
@@ -22,10 +23,8 @@ _LOG = logging.getLogger(__name__)
 
 
 class HTCPSystemData:
-    """Container for parsed HTCP system data."""
 
     def __init__(self):
-        """Initialize system data container."""
         self.cpu_temp: Optional[float] = None
         self.cpu_load: Optional[float] = None
         self.cpu_clock: Optional[float] = None
@@ -55,7 +54,6 @@ class HTCPSystemData:
         self.detected_network_name: str = "Network"
 
     def to_dict(self) -> Dict[str, Any]:
-        """Convert to dictionary format."""
         return {
             "cpu_temp": self.cpu_temp,
             "cpu_load": self.cpu_load,
@@ -86,25 +84,14 @@ class HTCPSystemData:
 
 
 class HTCPClient:
-    """HTTP client for LibreHardwareMonitor communication."""
 
     def __init__(self, config: HTCPConfig):
-        """
-        Initialize HTCP client.
-        
-        :param config: configuration instance
-        """
         self._config = config
         self._session: Optional[aiohttp.ClientSession] = None
         self._system_data = HTCPSystemData()
         self._is_connected = False
 
     async def connect(self) -> bool:
-        """
-        Connect to LibreHardwareMonitor.
-        
-        :return: True if connected successfully
-        """
         try:
             if self._session is None:
                 ssl_context = ssl.create_default_context(cafile=certifi.where())
@@ -126,7 +113,6 @@ class HTCPClient:
             return False
 
     async def disconnect(self) -> None:
-        """Disconnect from LibreHardwareMonitor."""
         if self._session:
             await self._session.close()
             self._session = None
@@ -134,12 +120,6 @@ class HTCPClient:
         _LOG.info("Disconnected from LibreHardwareMonitor")
 
     async def _fetch_data(self) -> Dict[str, Any]:
-        """
-        Fetch raw JSON data from LibreHardwareMonitor.
-        
-        :return: raw JSON data
-        :raises: aiohttp.ClientError if request fails
-        """
         if not self._session:
             raise aiohttp.ClientError("Not connected")
 
@@ -149,12 +129,6 @@ class HTCPClient:
             return await response.json()
 
     def _parse_sensor_value(self, value_str: str) -> Optional[float]:
-        """
-        Parse sensor value from string format.
-        
-        :param value_str: sensor value string
-        :return: parsed float value or None
-        """
         try:
             parts = value_str.split()
             if parts:
@@ -164,13 +138,6 @@ class HTCPClient:
         return None
 
     def _find_sensor_by_text(self, hardware: Dict[str, Any], target_texts: List[str]) -> Optional[float]:
-        """
-        Find a sensor by matching text patterns.
-        
-        :param hardware: hardware node from JSON
-        :param target_texts: list of text patterns to match
-        :return: sensor value or None if not found
-        """
         for sensor_group in hardware.get("Children", []):
             for sensor in sensor_group.get("Children", []):
                 sensor_text = sensor.get("Text", "").lower()
@@ -182,7 +149,6 @@ class HTCPClient:
         return None
 
     def _detect_cpu_hardware(self, data: Dict[str, Any]) -> Optional[Dict[str, Any]]:
-        """Detect CPU hardware dynamically."""
         for hardware in data.get("Children", []):
             for component in hardware.get("Children", []):
                 component_text = component.get("Text", "").lower()
@@ -194,7 +160,6 @@ class HTCPClient:
         return None
 
     def _detect_gpu_hardware(self, data: Dict[str, Any]) -> Optional[Dict[str, Any]]:
-        """Detect dedicated GPU hardware dynamically."""
         for hardware in data.get("Children", []):
             for component in hardware.get("Children", []):
                 component_text = component.get("Text", "").lower()
@@ -207,7 +172,6 @@ class HTCPClient:
         return None
 
     def _detect_memory_hardware(self, data: Dict[str, Any]) -> Optional[Dict[str, Any]]:
-        """Detect memory hardware dynamically."""
         for hardware in data.get("Children", []):
             for component in hardware.get("Children", []):
                 component_text = component.get("Text", "").lower()
@@ -217,7 +181,6 @@ class HTCPClient:
         return None
 
     def _detect_storage_hardware(self, data: Dict[str, Any]) -> Optional[Dict[str, Any]]:
-        """Detect primary storage hardware dynamically."""
         storage_devices = []
         
         for hardware in data.get("Children", []):
@@ -242,7 +205,6 @@ class HTCPClient:
         return None
 
     def _detect_active_network_interface(self, data: Dict[str, Any]) -> Optional[Dict[str, Any]]:
-        """Detect the active network interface dynamically."""
         interfaces = []
         
         for hardware in data.get("Children", []):
@@ -284,7 +246,6 @@ class HTCPClient:
         return None
 
     def _detect_motherboard_hardware(self, data: Dict[str, Any]) -> Optional[Dict[str, Any]]:
-        """Detect motherboard hardware for temperature and fan sensors."""
         for hardware in data.get("Children", []):
             for component in hardware.get("Children", []):
                 component_text = component.get("Text", "").lower()
@@ -294,7 +255,6 @@ class HTCPClient:
         return None
 
     def _extract_storage_size_from_name(self, hardware_name: str) -> Optional[float]:
-        """Extract storage size from hardware name."""
         try:
             size_patterns = [
                 r'(\d+(?:\.\d+)?)\s*TB',
@@ -315,7 +275,6 @@ class HTCPClient:
         return None
 
     def _parse_cpu_data(self, cpu_hardware: Dict[str, Any]) -> None:
-        """Parse CPU sensor data."""
         cpu_temp = self._find_sensor_by_text(cpu_hardware, [
             "core average", "cpu package", "package", "tctl", "tdie"
         ])
@@ -343,7 +302,6 @@ class HTCPClient:
             self._system_data.cpu_clock = sum(clocks) / len(clocks)
 
     def _parse_gpu_data(self, gpu_hardware: Dict[str, Any]) -> None:
-        """Parse GPU sensor data."""
         gpu_temp = self._find_sensor_by_text(gpu_hardware, [
             "gpu core", "gpu", "core", "temperature"
         ])
@@ -357,7 +315,6 @@ class HTCPClient:
             self._system_data.gpu_load = gpu_load
 
     def _parse_memory_data(self, memory_hardware: Dict[str, Any]) -> None:
-        """Parse memory sensor data."""
         memory_used = self._find_sensor_by_text(memory_hardware, ["memory used", "used"])
         memory_available = self._find_sensor_by_text(memory_hardware, ["memory available", "available"])
         
@@ -368,7 +325,6 @@ class HTCPClient:
             self._system_data.memory_total = memory_used + memory_available
 
     def _parse_storage_data(self, storage_hardware: Dict[str, Any]) -> None:
-        """Parse storage sensor data."""
         used_percent = self._find_sensor_by_text(storage_hardware, ["used space", "usage"])
         if used_percent:
             self._system_data.storage_used_percent = used_percent
@@ -381,7 +337,6 @@ class HTCPClient:
                 self._system_data.storage_used = (used_percent / 100) * total_size
 
     def _parse_network_data(self, network_hardware: Dict[str, Any]) -> None:
-        """Parse network sensor data."""
         upload_speed = self._find_sensor_by_text(network_hardware, ["upload speed", "tx", "sent"])
         if upload_speed is not None:
             is_megabytes = False
@@ -415,7 +370,6 @@ class HTCPClient:
                 self._system_data.network_down = download_speed / 125
 
     def _parse_motherboard_data(self, motherboard_hardware: Dict[str, Any]) -> None:
-        """Parse motherboard sensor data for temperatures and fans."""
         temperatures = []
         fan_speeds = []
         
@@ -446,23 +400,16 @@ class HTCPClient:
             self._system_data.fan_speeds = fan_speeds
 
     def _parse_cpu_power_data(self, cpu_hardware: Dict[str, Any]) -> None:
-        """Parse CPU power consumption data."""
         cpu_power = self._find_sensor_by_text(cpu_hardware, ["cpu package", "package power", "cpu power"])
         if cpu_power:
             self._system_data.cpu_power = cpu_power
 
     def _parse_storage_temperature(self, storage_hardware: Dict[str, Any]) -> None:
-        """Parse storage temperature data."""
         storage_temp = self._find_sensor_by_text(storage_hardware, ["temperature"])
         if storage_temp:
             self._system_data.storage_temp = storage_temp
 
     async def update_system_data(self) -> bool:
-        """
-        Update system data from LibreHardwareMonitor.
-        
-        :return: True if update successful
-        """
         try:
             raw_data = await self._fetch_data()
             
@@ -515,12 +462,6 @@ class HTCPClient:
             return False
 
     async def send_remote_command(self, command: str) -> bool:
-        """
-        Send a remote command to the Windows agent.
-        
-        :param command: command to send
-        :return: True if successful
-        """
         try:
             agent_url = f"http://{self._config.host}:8086/command"
             
@@ -546,54 +487,38 @@ class HTCPClient:
             _LOG.error(f"Failed to send remote command '{command}': {ex}")
             return False
 
-    async def launch_application(self, app_name: str) -> bool:
-        """
-        Launch application on HTPC.
+    async def power_on_wol(self) -> bool:
+        if not self._config.wol_enabled:
+            _LOG.warning("WoL not configured - no MAC address provided")
+            return False
         
-        :param app_name: name of application to launch
-        :return: True if launched successfully
-        """
+        try:
+            send_magic_packet(self._config.mac_address)
+            _LOG.info(f"WoL magic packet sent to {self._config.mac_address}")
+            return True
+        except Exception as ex:
+            _LOG.error(f"Failed to send WoL packet: {ex}")
+            return False
+
+    async def launch_application(self, app_name: str) -> bool:
         return await self.send_remote_command(f"app_{app_name}")
 
     async def set_volume(self, volume: int) -> bool:
-        """
-        Set system volume on HTPC.
-        
-        :param volume: volume level (0-100)
-        :return: True if successful
-        """
         return await self.send_remote_command(f"set_volume:{volume}")
 
     async def mute_toggle(self) -> bool:
-        """
-        Toggle mute on HTPC.
-        
-        :return: True if successful
-        """
         return await self.send_remote_command("mute_toggle")
 
     async def power_sleep(self) -> bool:
-        """
-        Put HTPC to sleep.
-        
-        :return: True if successful
-        """
         return await self.send_remote_command("power_sleep")
 
     async def power_wake(self) -> bool:
-        """
-        Wake HTPC from sleep.
-        
-        :return: True if successful
-        """
         return await self.send_remote_command("power_wake")
 
     @property
     def is_connected(self) -> bool:
-        """Check if connected to LibreHardwareMonitor."""
         return self._is_connected
 
     @property
     def system_data(self) -> HTCPSystemData:
-        """Get current system data."""
         return self._system_data

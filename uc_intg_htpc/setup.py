@@ -29,25 +29,12 @@ _LOG = logging.getLogger(__name__)
 
 
 class HTCPSetup:
-    """Setup flow handler for HTCP integration."""
 
     def __init__(self, config: HTCPConfig, api):
-        """
-        Initialize setup handler.
-        
-        :param config: configuration instance
-        :param api: IntegrationAPI instance
-        """
         self._config = config
         self._api = api
 
     async def handle_setup(self, msg_data: Any) -> SetupAction:
-        """
-        Handle setup request.
-        
-        :param msg_data: setup message data
-        :return: setup action response
-        """
         try:
             if isinstance(msg_data, DriverSetupRequest):
                 return await self._handle_driver_setup_request(msg_data)
@@ -65,7 +52,6 @@ class HTCPSetup:
             return SetupError(IntegrationSetupError.OTHER)
 
     async def _handle_driver_setup_request(self, request: DriverSetupRequest) -> SetupAction:
-        """Handle initial driver setup request."""
         _LOG.info("Starting HTCP integration setup (reconfigure: %s)", request.reconfigure)
         
         host = request.setup_data.get("host", "192.168.1.100")
@@ -86,10 +72,13 @@ class HTCPSetup:
         
         _LOG.info("HTCP connection test successful.")
         
+        mac_address = request.setup_data.get("mac_address", "").strip()
+        
         self._temp_config = {
             "host": host,
             "port": port,
-            "temperature_unit": request.setup_data.get("temperature_unit", "celsius")
+            "temperature_unit": request.setup_data.get("temperature_unit", "celsius"),
+            "mac_address": mac_address
         }
         
         agent_status = await self._test_agent_connection()
@@ -102,7 +91,6 @@ class HTCPSetup:
         )
 
     async def _handle_user_confirmation_response(self, response: UserConfirmationResponse) -> SetupAction:
-        """Handle user confirmation."""
         if response.confirm:
             _LOG.info("User confirmed setup. Saving configuration.")
             
@@ -117,7 +105,6 @@ class HTCPSetup:
             return AbortDriverSetup(IntegrationSetupError.OTHER)
 
     async def _test_connection(self, host: str, port: int) -> Dict[str, Any]:
-        """Test connection to LibreHardwareMonitor."""
         url = f"http://{host}:{port}/data.json"
         try:
             ssl_context = ssl.create_default_context(cafile=certifi.where())
@@ -139,7 +126,6 @@ class HTCPSetup:
             return {"success": False, "error": f"Connection error: {e}"}
 
     async def _test_agent_connection(self) -> bool:
-        """Test connection to Windows agent."""
         try:
             agent_url = f"http://{self._temp_config['host']}:8086/health"
             timeout = aiohttp.ClientTimeout(total=5)
@@ -150,7 +136,6 @@ class HTCPSetup:
             return False
 
     def _count_sensors(self, data: Dict[str, Any]) -> int:
-        """Recursively count sensors in LibreHardwareMonitor data."""
         count = 0
         if isinstance(data, dict):
             if "Value" in data and data.get("Value", "").strip():
@@ -160,18 +145,15 @@ class HTCPSetup:
         return count
 
     def _generate_setup_summary(self, config: Dict[str, Any], result: Dict[str, Any], agent_status: bool) -> str:
-        """Generate a user-friendly setup summary."""
         temp_unit = "Celsius" if config.get('temperature_unit') == "celsius" else "Fahrenheit"
         agent_text = "Connected" if agent_status else "Not detected (optional)"
+        wol_text = "Enabled" if config.get('mac_address') else "Disabled"
         
         return (
             f"🖥️ HTPC: {config['host']}:{config['port']}\n"
             f"🌡️ Temperature: {temp_unit}\n"
             f"📊 Sensors: {result.get('sensor_count', 'N/A')}\n"
-            f"🎮 Windows Agent: {agent_text}\n\n"
-            "✅ Ready to create entities!\n\n"
-            "📝 Custom Apps:\n"
-            "Use SELECT SOURCE in the Remote entity\n"
-            "to configure custom app paths like:\n"
-            "'My App|C:\\Program Files\\App\\app.exe'"
+            f"🎮 Windows Agent: {agent_text}\n"
+            f"⚡ Wake-on-LAN: {wol_text}\n\n"
+            "✅ Ready to create entities!"
         )

@@ -14,16 +14,9 @@ _LOG = logging.getLogger(__name__)
 
 
 class HTCPConfig:
-    """Configuration manager for HTCP integration."""
 
     def __init__(self, config_dir: str = None):
-        """
-        Initialize configuration manager.
-        
-        :param config_dir: configuration directory path
-        """
         if config_dir is None:
-            # Use UC_CONFIG_HOME environment variable or fall back to /tmp
             config_dir = (
                 os.getenv("UC_CONFIG_HOME") or 
                 os.getenv("HOME") or 
@@ -36,7 +29,6 @@ class HTCPConfig:
         self._load_config()
 
     def _load_config(self) -> None:
-        """Load configuration from file."""
         try:
             if os.path.exists(self._config_file):
                 with open(self._config_file, "r", encoding="utf-8") as file:
@@ -50,11 +42,6 @@ class HTCPConfig:
             self._config = self._default_config()
 
     def save_config(self) -> bool:
-        """
-        Save configuration to file.
-        
-        :return: True if successful, False otherwise
-        """
         try:
             os.makedirs(self._config_dir, exist_ok=True)
             
@@ -65,7 +52,7 @@ class HTCPConfig:
                 os.remove(test_file)
             except (OSError, IOError) as e:
                 _LOG.error("Config directory not writable (%s): %s", self._config_dir, e)
-                return False  # Fail if we can't save config
+                return False
             
             with open(self._config_file, "w", encoding="utf-8") as file:
                 json.dump(self._config, file, indent=2)
@@ -73,59 +60,50 @@ class HTCPConfig:
             return True
         except Exception as ex:
             _LOG.error("Failed to save configuration to %s: %s", self._config_file, ex)
-            return False  # Fail setup if config can't be saved
+            return False
 
     def _default_config(self) -> Dict[str, Any]:
-        """Get default configuration."""
         return {
             "host": "",
             "port": 8085,
-            "temperature_unit": "celsius"
+            "temperature_unit": "celsius",
+            "mac_address": ""
         }
 
     def update_config(self, new_config: Dict[str, Any]) -> None:
-        """
-        Update configuration with new values.
-        
-        :param new_config: new configuration values
-        """
         self._config.update(new_config)
 
     @property
     def host(self) -> str:
-        """Get HTCP host IP address."""
         return self._config.get("host", "192.168.1.100")
 
     @property
     def port(self) -> int:
-        """Get LibreHardwareMonitor port."""
         return self._config.get("port", 8085)
 
     @property
     def temperature_unit(self) -> str:
-        """Get temperature unit (celsius or fahrenheit)."""
         return self._config.get("temperature_unit", "celsius")
 
     @property
+    def mac_address(self) -> str:
+        return self._config.get("mac_address", "").strip()
+
+    @property
+    def wol_enabled(self) -> bool:
+        return bool(self.mac_address)
+
+    @property
     def base_url(self) -> str:
-        """Get base URL for LibreHardwareMonitor."""
         return f"http://{self.host}:{self.port}"
 
     def convert_temperature(self, celsius: float) -> float:
-        """
-        Convert temperature based on configured unit.
-        
-        :param celsius: temperature in Celsius
-        :return: temperature in configured unit
-        """
         if self.temperature_unit == "fahrenheit":
             return (celsius * 9/5) + 32
         return celsius
 
     def temperature_symbol(self) -> str:
-        """Get temperature symbol based on configured unit."""
         return "°F" if self.temperature_unit == "fahrenheit" else "°C"
 
 
-# Backwards compatibility alias
 Config = HTCPConfig
