@@ -31,7 +31,6 @@ _initialization_lock: asyncio.Lock = asyncio.Lock()
 
 
 async def setup_handler(msg: SetupAction) -> SetupAction:
-    """Handle integration setup flow and create entities."""
     global _config, _client, _media_player, _remote, _setup_manager, _entities_ready
     
     if not _config:
@@ -45,14 +44,20 @@ async def setup_handler(msg: SetupAction) -> SetupAction:
         _setup_manager = None
         
     if isinstance(action, SetupComplete):
-        _LOG.info("Setup confirmed. Initializing integration components...")
+        _LOG.info("Setup confirmed. Reloading configuration and initializing entities...")
+        
+        _config._load_config()
+        _LOG.debug("Config reloaded - enable_hardware_monitoring: %s", _config.enable_hardware_monitoring)
+        
+        _entities_ready = False
+        _LOG.info("Reset entities_ready flag for reconfiguration")
+        
         await _initialize_entities()
     
     return action
 
 
 async def _initialize_entities():
-    """Initialize entities after successful setup or connection - with race condition protection."""
     global _config, _client, _media_player, _remote, api, _entities_ready
     
     async with _initialization_lock:
@@ -63,32 +68,57 @@ async def _initialize_entities():
         if not _config or not _config.host:
             _LOG.info("HTCP not configured, skipping entity initialization")
             return
-            
+        
         _LOG.info("Initializing HTCP entities...")
+        _LOG.debug("Config loaded - enable_hardware_monitoring: %s", _config.enable_hardware_monitoring)
         
         try:
             _client = HTCPClient(_config)
+            _LOG.info("HTPC Client created")
             
-            _media_player = HTCPMediaPlayer(_client, _config, api)
+            _media_player = None
+            _remote = None
+            
+            if _config.enable_hardware_monitoring:
+                _LOG.info("Hardware monitoring is ENABLED - creating media player entity")
+                _media_player = HTCPMediaPlayer(_client, _config, api)
+                _LOG.info("Media player entity created: %s", _media_player.id)
+            else:
+                _LOG.info("Hardware monitoring is DISABLED - skipping media player entity")
+            
             _remote = HTCPRemote(_client, _config, api)
+            _LOG.info("Remote entity created: %s", _remote.id)
             
             api.available_entities.clear()
-            api.available_entities.add(_media_player)
+            _LOG.info("Cleared existing available entities")
+            
+            if _media_player:
+                api.available_entities.add(_media_player)
+                _LOG.info("Added media player to available entities")
+            else:
+                _LOG.info("Media player not created - not added to available entities")
+            
             api.available_entities.add(_remote)
+            _LOG.info("Added remote to available entities")
             
             _entities_ready = True
             
-            _LOG.info("HTPC entities created and ready for subscription")
+            _LOG.info("HTPC entities initialized successfully")
+            _LOG.info("Media player created: %s", _media_player is not None)
+            _LOG.info("Remote created: %s", _remote is not None)
             
         except Exception as e:
-            _LOG.error("Failed to initialize entities: %s", e)
+            _LOG.error("Failed to initialize entities: %s", e, exc_info=True)
             _entities_ready = False
             raise
 
 
 async def start_monitoring_loop():
-    """Start the monitoring task if not already running."""
     global _monitoring_task
+    if _media_player is None:
+        _LOG.info("Media player not available - monitoring disabled")
+        return
+        
     if _monitoring_task is None or _monitoring_task.done():
         if _client and _client.is_connected:
             _monitoring_task = asyncio.create_task(_media_player.run_monitoring())
@@ -96,7 +126,6 @@ async def start_monitoring_loop():
 
 
 async def on_connect() -> None:
-    """Handle Remote connection with reboot survival."""
     global _config, _entities_ready
     
     _LOG.info("Remote connected. Checking configuration state...")
@@ -105,6 +134,7 @@ async def on_connect() -> None:
         _config = HTCPConfig()
     
     _config._load_config()
+    _LOG.debug("Config reloaded - enable_hardware_monitoring: %s", _config.enable_hardware_monitoring)
     
     if _config.host and not _entities_ready:
         _LOG.info("Configuration found but entities missing, reinitializing...")
@@ -116,14 +146,18 @@ async def on_connect() -> None:
             return
     
     if _config.host and _entities_ready:
-        if _client and not _client.is_connected:
-            if await _client.connect():
-                _LOG.info("Successfully connected to LibreHardwareMonitor.")
-                await api.set_device_state(DeviceStates.CONNECTED)
+        if _config.enable_hardware_monitoring and _client:
+            if not _client.is_connected:
+                if await _client.connect():
+                    _LOG.info("Successfully connected to LibreHardwareMonitor.")
+                    await api.set_device_state(DeviceStates.CONNECTED)
+                else:
+                    _LOG.error("Failed to connect to LibreHardwareMonitor.")
+                    await api.set_device_state(DeviceStates.ERROR)
             else:
-                _LOG.error("Failed to connect to LibreHardwareMonitor.")
-                await api.set_device_state(DeviceStates.ERROR)
+                await api.set_device_state(DeviceStates.CONNECTED)
         else:
+            _LOG.info("Hardware monitoring disabled - remote control only mode.")
             await api.set_device_state(DeviceStates.CONNECTED)
     elif not _config.host:
         _LOG.info("No configuration found, awaiting setup")
@@ -134,10 +168,8 @@ async def on_connect() -> None:
 
 
 async def on_subscribe_entities(entity_ids: list[str]):
-    """Handle entity subscriptions with race condition protection."""
     _LOG.info(f"Entities subscription requested: {entity_ids}")
     
-    # Guard against race condition
     if not _entities_ready:
         _LOG.error("RACE CONDITION: Subscription before entities ready! Attempting recovery...")
         if _config and _config.host:
@@ -146,24 +178,20 @@ async def on_subscribe_entities(entity_ids: list[str]):
             _LOG.error("Cannot recover - no configuration available")
             return
     
-    available_entity_ids = []
-    if _media_player:
-        available_entity_ids.append(_media_player.id)
-    if _remote:
-        available_entity_ids.append(_remote.id)
-    
-    _LOG.info(f"Available entities: {available_entity_ids}")
+    _LOG.info(f"Media player available: {_media_player is not None}")
+    _LOG.info(f"Remote available: {_remote is not None}")
     
     for entity_id in entity_ids:
         if _media_player and entity_id == _media_player.id:
+            _LOG.info("Subscribing to media player entity")
             await _media_player.push_update()
             await start_monitoring_loop()
         if _remote and entity_id == _remote.id:
+            _LOG.info("Subscribing to remote entity")
             await _remote.push_update()
 
 
 async def on_disconnect() -> None:
-    """Handle Remote disconnection."""
     global _monitoring_task
     _LOG.info("Remote disconnected. Setting device state to DISCONNECTED.")
     await api.set_device_state(DeviceStates.DISCONNECTED)
@@ -177,7 +205,6 @@ async def on_disconnect() -> None:
 
 
 async def main():
-    """Main integration entry point with pre-initialization for reboot survival."""
     global api, _config
     logging.basicConfig(
         level=logging.DEBUG, 
@@ -192,6 +219,7 @@ async def main():
         _config = HTCPConfig()
         if _config.host:
             _LOG.info("Found existing configuration, pre-initializing entities for reboot survival")
+            _LOG.debug("Existing config - enable_hardware_monitoring: %s", _config.enable_hardware_monitoring)
             loop.create_task(_initialize_entities())
         
         api.add_listener(Events.CONNECT, on_connect)

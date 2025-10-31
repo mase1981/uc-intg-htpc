@@ -1,6 +1,6 @@
 {
     "driver_id": "uc_intg_htpc",
-    "version": "0.2.3",
+    "version": "0.2.6",
     "min_core_api": "0.21.0",
     "name": {
         "en": "HTPC System Monitor",
@@ -36,6 +36,37 @@
                 "field": {
                     "text": {
                         "value": ""
+                    }
+                }
+            },
+            {
+                "id": "enable_hardware_monitoring",
+                "label": {
+                    "en": "Hardware Monitoring",
+                    "de": "Hardware-Überwachung",
+                    "fr": "Surveillance matérielle"
+                },
+                "field": {
+                    "dropdown": {
+                        "value": "enabled",
+                        "items": [
+                            {
+                                "id": "enabled",
+                                "label": {
+                                    "en": "Enabled (Requires LibreHardwareMonitor)",
+                                    "de": "Aktiviert (LibreHardwareMonitor erforderlich)",
+                                    "fr": "Activé (LibreHardwareMonitor requis)"
+                                }
+                            },
+                            {
+                                "id": "disabled",
+                                "label": {
+                                    "en": "Disabled (Remote Control Only)",
+                                    "de": "Deaktiviert (nur Fernsteuerung)",
+                                    "fr": "Désactivé (télécommande uniquement)"
+                                }
+                            }
+                        ]
                     }
                 }
             },

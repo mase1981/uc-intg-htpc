@@ -66,6 +66,7 @@ class HTCPConfig:
         return {
             "host": "",
             "port": 8085,
+            "enable_hardware_monitoring": True,
             "temperature_unit": "celsius",
             "mac_address": ""
         }
@@ -80,6 +81,10 @@ class HTCPConfig:
     @property
     def port(self) -> int:
         return self._config.get("port", 8085)
+
+    @property
+    def enable_hardware_monitoring(self) -> bool:
+        return self._config.get("enable_hardware_monitoring", True)
 
     @property
     def temperature_unit(self) -> str:
