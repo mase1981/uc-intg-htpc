@@ -56,21 +56,35 @@ class HTCPSetup:
         
         host = request.setup_data.get("host", "192.168.1.100")
         port = 8085
+        enable_hardware_monitoring = request.setup_data.get("enable_hardware_monitoring", True)
         
-        connection_result = await self._test_connection(host, port)
+        # ALWAYS test Windows Agent (required for remote control)
+        agent_status = await self._test_agent_connection(host)
+        if not agent_status:
+            _LOG.error("Windows Agent connection failed - Agent is required!")
+            return SetupError(IntegrationSetupError.CONNECTION_REFUSED)
         
-        if not connection_result["success"]:
-            error_msg = connection_result.get("error", "Unknown connection error.")
-            _LOG.error("Connection test to HTCP failed: %s", error_msg)
-            if "refused" in error_msg.lower():
-                return SetupError(IntegrationSetupError.CONNECTION_REFUSED)
-            elif "timeout" in error_msg.lower():
-                return SetupError(IntegrationSetupError.TIMEOUT)
-            elif "not found" in error_msg.lower():
-                return SetupError(IntegrationSetupError.NOT_FOUND)
-            return SetupError(IntegrationSetupError.OTHER)
+        _LOG.info("Windows Agent connection successful.")
         
-        _LOG.info("HTCP connection test successful.")
+        # Conditionally test LibreHardwareMonitor only if enabled
+        connection_result = {"success": True, "sensor_count": 0}
+        if enable_hardware_monitoring:
+            connection_result = await self._test_connection(host, port)
+            
+            if not connection_result["success"]:
+                error_msg = connection_result.get("error", "Unknown connection error.")
+                _LOG.error("LibreHardwareMonitor connection test failed: %s", error_msg)
+                if "refused" in error_msg.lower():
+                    return SetupError(IntegrationSetupError.CONNECTION_REFUSED)
+                elif "timeout" in error_msg.lower():
+                    return SetupError(IntegrationSetupError.TIMEOUT)
+                elif "not found" in error_msg.lower():
+                    return SetupError(IntegrationSetupError.NOT_FOUND)
+                return SetupError(IntegrationSetupError.OTHER)
+            
+            _LOG.info("LibreHardwareMonitor connection test successful.")
+        else:
+            _LOG.info("Hardware monitoring disabled - skipping LibreHardwareMonitor test.")
         
         mac_address = request.setup_data.get("mac_address", "").strip()
         
@@ -78,10 +92,10 @@ class HTCPSetup:
             "host": host,
             "port": port,
             "temperature_unit": request.setup_data.get("temperature_unit", "celsius"),
-            "mac_address": mac_address
+            "mac_address": mac_address,
+            "enable_hardware_monitoring": enable_hardware_monitoring
         }
         
-        agent_status = await self._test_agent_connection()
         summary_text = self._generate_setup_summary(self._temp_config, connection_result, agent_status)
         
         return RequestUserConfirmation(
@@ -125,9 +139,9 @@ class HTCPSetup:
         except Exception as e:
             return {"success": False, "error": f"Connection error: {e}"}
 
-    async def _test_agent_connection(self) -> bool:
+    async def _test_agent_connection(self, host: str) -> bool:
         try:
-            agent_url = f"http://{self._temp_config['host']}:8086/health"
+            agent_url = f"http://{host}:8086/health"
             timeout = aiohttp.ClientTimeout(total=5)
             async with aiohttp.ClientSession(timeout=timeout) as session:
                 async with session.get(agent_url) as response:
@@ -146,14 +160,24 @@ class HTCPSetup:
 
     def _generate_setup_summary(self, config: Dict[str, Any], result: Dict[str, Any], agent_status: bool) -> str:
         temp_unit = "Celsius" if config.get('temperature_unit') == "celsius" else "Fahrenheit"
-        agent_text = "Connected" if agent_status else "Not detected (optional)"
+        agent_text = "✅ Connected" if agent_status else "❌ Not detected (REQUIRED)"
         wol_text = "Enabled" if config.get('mac_address') else "Disabled"
+        
+        hardware_monitoring_enabled = config.get('enable_hardware_monitoring', True)
+        
+        if hardware_monitoring_enabled:
+            hardware_text = f"✅ Enabled ({result.get('sensor_count', 'N/A')} sensors)"
+        else:
+            hardware_text = "⚠️ Disabled (Remote control only)"
         
         return (
             f"🖥️ HTPC: {config['host']}:{config['port']}\n"
-            f"🌡️ Temperature: {temp_unit}\n"
-            f"📊 Sensors: {result.get('sensor_count', 'N/A')}\n"
             f"🎮 Windows Agent: {agent_text}\n"
+            f"📊 Hardware Monitoring: {hardware_text}\n"
+            f"🌡️ Temperature: {temp_unit}\n"
             f"⚡ Wake-on-LAN: {wol_text}\n\n"
+            "📝 Entities to be created:\n"
+            f"{'  • HTPC System Monitor (Media Player)\n' if hardware_monitoring_enabled else ''}"
+            "  • HTPC Advanced Remote (Remote)\n\n"
             "✅ Ready to create entities!"
         )

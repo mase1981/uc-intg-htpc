@@ -67,7 +67,8 @@ class HTCPConfig:
             "host": "",
             "port": 8085,
             "temperature_unit": "celsius",
-            "mac_address": ""
+            "mac_address": "",
+            "enable_hardware_monitoring": True
         }
 
     def update_config(self, new_config: Dict[str, Any]) -> None:
@@ -92,6 +93,10 @@ class HTCPConfig:
     @property
     def wol_enabled(self) -> bool:
         return bool(self.mac_address)
+
+    @property
+    def enable_hardware_monitoring(self) -> bool:
+        return self._config.get("enable_hardware_monitoring", True)
 
     @property
     def base_url(self) -> str:

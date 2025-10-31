@@ -92,6 +92,12 @@ class HTCPClient:
         self._is_connected = False
 
     async def connect(self) -> bool:
+        # Skip connection if hardware monitoring is disabled
+        if not self._config.enable_hardware_monitoring:
+            _LOG.info("Hardware monitoring disabled - skipping LibreHardwareMonitor connection")
+            self._is_connected = False
+            return True  # Return True to indicate no error (just not needed)
+        
         try:
             if self._session is None:
                 ssl_context = ssl.create_default_context(cafile=certifi.where())

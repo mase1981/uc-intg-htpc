@@ -1,6 +1,6 @@
 {
     "driver_id": "uc_intg_htpc",
-    "version": "0.2.3",
+    "version": "0.2.4",
     "min_core_api": "0.21.0",
     "name": {
         "en": "HTPC System Monitor",
@@ -36,6 +36,19 @@
                 "field": {
                     "text": {
                         "value": ""
+                    }
+                }
+            },
+            {
+                "id": "enable_hardware_monitoring",
+                "label": {
+                    "en": "Enable Hardware Monitoring (Requires LibreHardwareMonitor)",
+                    "de": "Hardware-Überwachung aktivieren (Erfordert LibreHardwareMonitor)",
+                    "fr": "Activer la surveillance matérielle (Nécessite LibreHardwareMonitor)"
+                },
+                "field": {
+                    "checkbox": {
+                        "value": true
                     }
                 }
             },

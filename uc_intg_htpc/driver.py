@@ -69,11 +69,20 @@ async def _initialize_entities():
         try:
             _client = HTCPClient(_config)
             
-            _media_player = HTCPMediaPlayer(_client, _config, api)
+            # Always create remote entity
             _remote = HTCPRemote(_client, _config, api)
             
             api.available_entities.clear()
-            api.available_entities.add(_media_player)
+            
+            # Conditionally create media player entity
+            if _config.enable_hardware_monitoring:
+                _LOG.info("Hardware monitoring enabled - creating Media Player entity")
+                _media_player = HTCPMediaPlayer(_client, _config, api)
+                api.available_entities.add(_media_player)
+            else:
+                _LOG.info("Hardware monitoring disabled - skipping Media Player entity")
+                _media_player = None
+            
             api.available_entities.add(_remote)
             
             _entities_ready = True
@@ -89,7 +98,7 @@ async def _initialize_entities():
 async def start_monitoring_loop():
     """Start the monitoring task if not already running."""
     global _monitoring_task
-    if _monitoring_task is None or _monitoring_task.done():
+    if _media_player and (_monitoring_task is None or _monitoring_task.done()):
         if _client and _client.is_connected:
             _monitoring_task = asyncio.create_task(_media_player.run_monitoring())
             _LOG.info("HTCP monitoring task started.")
@@ -116,14 +125,19 @@ async def on_connect() -> None:
             return
     
     if _config.host and _entities_ready:
-        if _client and not _client.is_connected:
-            if await _client.connect():
-                _LOG.info("Successfully connected to LibreHardwareMonitor.")
-                await api.set_device_state(DeviceStates.CONNECTED)
+        # Only connect to LibreHardwareMonitor if hardware monitoring is enabled
+        if _config.enable_hardware_monitoring:
+            if _client and not _client.is_connected:
+                if await _client.connect():
+                    _LOG.info("Successfully connected to LibreHardwareMonitor.")
+                    await api.set_device_state(DeviceStates.CONNECTED)
+                else:
+                    _LOG.error("Failed to connect to LibreHardwareMonitor.")
+                    await api.set_device_state(DeviceStates.ERROR)
             else:
-                _LOG.error("Failed to connect to LibreHardwareMonitor.")
-                await api.set_device_state(DeviceStates.ERROR)
+                await api.set_device_state(DeviceStates.CONNECTED)
         else:
+            _LOG.info("Hardware monitoring disabled - skipping LibreHardwareMonitor connection")
             await api.set_device_state(DeviceStates.CONNECTED)
     elif not _config.host:
         _LOG.info("No configuration found, awaiting setup")
