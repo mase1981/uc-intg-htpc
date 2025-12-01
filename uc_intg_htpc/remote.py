@@ -15,49 +15,9 @@ from uc_intg_htpc.config import HTCPConfig
 
 _LOG = logging.getLogger(__name__)
 
-SIMPLE_COMMANDS = [
-    "POWER_OFF",
-    "DPAD_UP",
-    "DPAD_DOWN",
-    "DPAD_LEFT",
-    "DPAD_RIGHT",
-    "DPAD_CENTER",
-    "BACK",
-    "HOME",
-    "MENU",
-    "PLAY",
-    "PAUSE",
-    "STOP",
-    "NEXT",
-    "PREVIOUS",
-    "FAST_FORWARD",
-    "REWIND",
-    "VOLUME_UP",
-    "VOLUME_DOWN",
-    "MUTE_TOGGLE",
-]
-
 COMMAND_MAP = {
     "POWER_ON": "power_on",
     "POWER_OFF": "power_shutdown",
-    "DPAD_UP": "arrow_up",
-    "DPAD_DOWN": "arrow_down",
-    "DPAD_LEFT": "arrow_left",
-    "DPAD_RIGHT": "arrow_right",
-    "DPAD_CENTER": "enter",
-    "BACK": "escape",
-    "HOME": "windows_key",
-    "MENU": "alt_tab",
-    "PLAY": "play",
-    "PAUSE": "pause",
-    "STOP": "stop",
-    "NEXT": "next",
-    "PREVIOUS": "previous",
-    "FAST_FORWARD": "fast_forward",
-    "REWIND": "rewind",
-    "VOLUME_UP": "volume_up",
-    "VOLUME_DOWN": "volume_down",
-    "MUTE_TOGGLE": "mute",
 }
 
 class HTCPRemote(Remote): 
@@ -67,7 +27,8 @@ class HTCPRemote(Remote):
         self._config = config
         self._api = api
         
-        ui_commands = [ 
+        simple_commands = [ 
+            "POWER_OFF",
             "arrow_up", "arrow_down", "arrow_left", "arrow_right", "enter", "escape", 
             "back", "home", "end", "page_up", "page_down", "tab", "space", "delete", 
             "backspace",
@@ -82,11 +43,8 @@ class HTCPRemote(Remote):
             "pair_bluetooth", "show_pairing_help"
         ]
         
-        simple_commands = SIMPLE_COMMANDS.copy()
-        
         if config.wol_enabled:
             simple_commands.insert(0, "POWER_ON")
-            ui_commands.append("power_on")
         
         nav_page = self._create_navigation_page()
         media_page = self._create_media_page()
