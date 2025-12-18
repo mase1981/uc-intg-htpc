@@ -66,7 +66,7 @@ Choose your setup based on your needs:
 ### Software (Required on Windows PC)
 
 #### Always Required:
-- **HTPC Agent** (Included) - [Download HTCP_Agent.exe](https://github.com/mase1981/uc-intg-htpc/blob/main/agents/HTCP_Agent.exe)
+- **HTPC Agent** (Included) - [Download HTCP_Agent.exe](https://github.com/mase1981/uc-intg-htpc/blob/main/agents%2FHTPC_Agent.exe)
 
 #### Optional (Only for Hardware Monitoring):
 - **LibreHardwareMonitor** (Free) - [Download Latest Release](https://github.com/LibreHardwareMonitor/LibreHardwareMonitor/releases)
