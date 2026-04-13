@@ -1,13 +1,13 @@
 version: '3.8'
-
 services:
-  htpc-integration:
+  integration:
     build:
       context: .
       dockerfile: Dockerfile
     container_name: uc-intg-htpc
     restart: unless-stopped
-    network_mode: host
+    ports:
+      - "9090:9090"
     volumes:
       - ./data:/config
     environment:

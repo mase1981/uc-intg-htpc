@@ -54,15 +54,9 @@ ENV/
 env.bak/
 venv.bak/
 
-# Spyder project settings
-.spyderproject
-.spyproject
-
-# Rope project settings
-.ropeproject
-
-# PyCharm
+# IDE
 .idea/
+.vscode/
 
 # mypy
 .mypy_cache/
@@ -75,11 +69,6 @@ config.json
 
 # OS generated files
 .DS_Store
-.DS_Store?
-._*
-.Spotlight-V100
-.Trashes
-ehthumbs.db
 Thumbs.db
 
 # Docker data
@@ -87,6 +76,14 @@ data/
 
 # Integration specific
 artifacts/
-test_librehardwaremonitor.py
 version_info.txt
-htpc_agent.py
+
+# Testing files (keep local only, never push to repository)
+tests/
+simulator/
+test_*.py
+
+# Claude knowledge base (local only, never commit)
+.claude/
+knowledge-base/
+*.knowledge.md

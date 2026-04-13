@@ -1,127 +1,45 @@
 {
-    "driver_id": "uc_intg_htpc",
-    "version": "1.0.3",
-    "min_core_api": "0.21.0",
-    "name": {
-        "en": "HTPC System Monitor",
-        "de": "HTPC System Monitor",
-        "fr": "Moniteur Système HTPC"
+  "driver_id": "uc-intg-htpc",
+  "version": "2.0.0",
+  "min_core_api": "0.22.0",
+  "name": {
+    "en": "HTPC System Monitor",
+    "de": "HTPC System Monitor",
+    "fr": "Moniteur Système HTPC"
+  },
+  "icon": "uc:computer",
+  "description": {
+    "en": "Monitor HTPC system performance and control media applications via LibreHardwareMonitor and Windows Agent",
+    "de": "Überwachen Sie die HTPC-Systemleistung und steuern Sie Medienanwendungen über LibreHardwareMonitor und Windows Agent",
+    "fr": "Surveiller les performances du système HTPC et contrôler les applications multimédias via LibreHardwareMonitor et Windows Agent"
+  },
+  "developer": {
+    "name": "Meir Miyara",
+    "email": "meir.miyara@gmail.com",
+    "url": "https://github.com/mase1981/uc-intg-htpc"
+  },
+  "home_page": "https://github.com/mase1981/uc-intg-htpc",
+  "release_date": "2026-04-13",
+  "setup_data_schema": {
+    "title": {
+      "en": "HTPC System Monitor Setup",
+      "de": "HTPC System Monitor Einrichtung",
+      "fr": "Configuration Moniteur Système HTPC"
     },
-    "description": {
-        "en": "Monitor HTPC system performance and control media applications via LibreHardwareMonitor and Bluetooth",
-        "de": "Überwachen Sie die HTPC-Systemleistung und steuern Sie Medienanwendungen über LibreHardwareMonitor und Bluetooth",
-        "fr": "Surveiller les performances du système HTPC et contrôler les applications multimédias via LibreHardwareMonitor et Bluetooth"
-    },
-    "developer": {
-        "name": "Meir Miyara",
-        "email": "meir.miyara@gmail.com",
-        "url": "https://github.com/mase1981"
-    },
-    "home_page": "https://github.com/mase1981/uc-intg-htpc",
-    "documentation": "https://github.com/mase1981/uc-intg-htpc/blob/main/README.md",
-    "setup_data_schema": {
-        "title": {
-            "en": "HTPC System Monitor Setup",
-            "de": "HTPC System Monitor Einrichtung",
-            "fr": "Configuration Moniteur Système HTPC"
+    "settings": [
+      {
+        "id": "info",
+        "label": {
+          "en": "Setup"
         },
-        "settings": [
-            {
-                "id": "host",
-                "label": {
-                    "en": "HTPC IP Address",
-                    "de": "HTPC IP-Adresse",
-                    "fr": "Adresse IP HTPC"
-                },
-                "field": {
-                    "text": {
-                        "value": ""
-                    }
-                }
-            },
-            {
-                "id": "enable_hardware_monitoring",
-                "label": {
-                    "en": "Hardware Monitoring",
-                    "de": "Hardware-Überwachung",
-                    "fr": "Surveillance matérielle"
-                },
-                "field": {
-                    "dropdown": {
-                        "value": "enabled",
-                        "items": [
-                            {
-                                "id": "enabled",
-                                "label": {
-                                    "en": "Enabled (Requires LibreHardwareMonitor)",
-                                    "de": "Aktiviert (LibreHardwareMonitor erforderlich)",
-                                    "fr": "Activé (LibreHardwareMonitor requis)"
-                                }
-                            },
-                            {
-                                "id": "disabled",
-                                "label": {
-                                    "en": "Disabled (Remote Control Only)",
-                                    "de": "Deaktiviert (nur Fernsteuerung)",
-                                    "fr": "Désactivé (télécommande uniquement)"
-                                }
-                            }
-                        ]
-                    }
-                }
-            },
-            {
-                "id": "temperature_unit",
-                "label": {
-                    "en": "Temperature Unit",
-                    "de": "Temperatureinheit",
-                    "fr": "Unité de température"
-                },
-                "field": {
-                    "dropdown": {
-                        "value": "celsius",
-                        "items": [
-                            {
-                                "id": "celsius",
-                                "label": {
-                                    "en": "Celsius (°C)",
-                                    "de": "Celsius (°C)",
-                                    "fr": "Celsius (°C)"
-                                }
-                            },
-                            {
-                                "id": "fahrenheit",
-                                "label": {
-                                    "en": "Fahrenheit (°F)",
-                                    "de": "Fahrenheit (°F)",
-                                    "fr": "Fahrenheit (°F)"
-                                }
-                            }
-                        ]
-                    }
-                }
-            },
-            {
-                "id": "mac_address",
-                "label": {
-                    "en": "MAC Address (Optional - for Wake-on-LAN)",
-                    "de": "MAC-Adresse (Optional - für Wake-on-LAN)",
-                    "fr": "Adresse MAC (Optionnel - pour Wake-on-LAN)"
-                },
-                "field": {
-                    "text": {
-                        "value": ""
-                    }
-                }
+        "field": {
+          "label": {
+            "value": {
+              "en": "Enter your HTPC connection details on the next screen. Hardware monitoring requires LibreHardwareMonitor running on your HTPC."
             }
-        ]
-    },
-    "release_date": "2025-01-16",
-    "icon": "uc:computer",
-    "enabled": true,
-    "port": 9090,
-    "mdns": {
-        "name": "HTPC System Monitor",
-        "mdns_type": "_uc-integration._tcp.local."
-    }
+          }
+        }
+      }
+    ]
+  }
 }

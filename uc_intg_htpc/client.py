@@ -1,524 +1,367 @@
 """
-LibreHardwareMonitor HTTP client for HTPC System Monitor Integration.
+LibreHardwareMonitor and HTPC Agent HTTP client.
 
-:copyright: (c) 2025 by Meir Miyara.
+:copyright: (c) 2026 by Meir Miyara.
 :license: MPL-2.0, see LICENSE for more details.
 """
 
-import asyncio
-import json
 import logging
-import ssl
-import time
 import re
-from typing import Any, Dict, List, Optional
+import time
+from typing import Any
 
 import aiohttp
-import certifi
 from wakeonlan import send_magic_packet
 
 from uc_intg_htpc.config import HTCPConfig
+from uc_intg_htpc.const import AGENT_PORT
 
 _LOG = logging.getLogger(__name__)
 
 
-class HTCPSystemData:
+class SystemData:
+    """Parsed hardware sensor data from LibreHardwareMonitor."""
 
-    def __init__(self):
-        self.cpu_temp: Optional[float] = None
-        self.cpu_load: Optional[float] = None
-        self.cpu_clock: Optional[float] = None
-        self.gpu_temp: Optional[float] = None
-        self.gpu_load: Optional[float] = None
-        self.memory_used: Optional[float] = None
-        self.memory_total: Optional[float] = None
-        self.storage_used: Optional[float] = None
-        self.storage_total: Optional[float] = None
-        self.storage_used_percent: Optional[float] = None
-        self.network_up: Optional[float] = None
-        self.network_down: Optional[float] = None
-        self.last_updated: float = time.time()
-        
-        self.motherboard_temp_avg: Optional[float] = None
-        self.motherboard_temp_max: Optional[float] = None
-        self.fan_speeds: List[float] = []
-        self.cpu_power: Optional[float] = None
-        self.storage_temp: Optional[float] = None
-        
+    def __init__(self) -> None:
+        self.cpu_temp: float | None = None
+        self.cpu_load: float | None = None
+        self.cpu_clock: float | None = None
+        self.cpu_power: float | None = None
+        self.gpu_temp: float | None = None
+        self.gpu_load: float | None = None
+        self.memory_used: float | None = None
+        self.memory_total: float | None = None
+        self.storage_used: float | None = None
+        self.storage_total: float | None = None
+        self.storage_used_percent: float | None = None
+        self.storage_temp: float | None = None
+        self.network_up: float | None = None
+        self.network_down: float | None = None
+        self.motherboard_temp_avg: float | None = None
+        self.motherboard_temp_max: float | None = None
+        self.fan_speeds: list[float] = []
         self.has_dedicated_gpu: bool = False
-        self.has_network_data: bool = False
-        self.has_storage_data: bool = False
         self.detected_cpu_name: str = "CPU"
         self.detected_gpu_name: str = "GPU"
-        self.detected_storage_name: str = "Storage"
-        self.detected_network_name: str = "Network"
-
-    def to_dict(self) -> Dict[str, Any]:
-        return {
-            "cpu_temp": self.cpu_temp,
-            "cpu_load": self.cpu_load,
-            "cpu_clock": self.cpu_clock,
-            "gpu_temp": self.gpu_temp,
-            "gpu_load": self.gpu_load,
-            "memory_used": self.memory_used,
-            "memory_total": self.memory_total,
-            "storage_used": self.storage_used,
-            "storage_total": self.storage_total,
-            "storage_used_percent": self.storage_used_percent,
-            "network_up": self.network_up,
-            "network_down": self.network_down,
-            "last_updated": self.last_updated,
-            "motherboard_temp_avg": self.motherboard_temp_avg,
-            "motherboard_temp_max": self.motherboard_temp_max,
-            "fan_speeds": self.fan_speeds,
-            "cpu_power": self.cpu_power,
-            "storage_temp": self.storage_temp,
-            "has_dedicated_gpu": self.has_dedicated_gpu,
-            "has_network_data": self.has_network_data,
-            "has_storage_data": self.has_storage_data,
-            "detected_cpu_name": self.detected_cpu_name,
-            "detected_gpu_name": self.detected_gpu_name,
-            "detected_storage_name": self.detected_storage_name,
-            "detected_network_name": self.detected_network_name
-        }
+        self.last_updated: float = 0.0
 
 
 class HTCPClient:
+    """Client for LibreHardwareMonitor data and HTPC Agent commands."""
 
-    def __init__(self, config: HTCPConfig):
+    def __init__(self, config: HTCPConfig) -> None:
         self._config = config
-        self._session: Optional[aiohttp.ClientSession] = None
-        self._system_data = HTCPSystemData()
-        self._is_connected = False
+        self._session: aiohttp.ClientSession | None = None
+        self._system_data = SystemData()
+
+    @property
+    def system_data(self) -> SystemData:
+        return self._system_data
 
     async def connect(self) -> bool:
-        try:
-            if self._session is None:
-                ssl_context = ssl.create_default_context(cafile=certifi.where())
-                connector = aiohttp.TCPConnector(ssl=ssl_context)
-                timeout = aiohttp.ClientTimeout(total=10)
-                self._session = aiohttp.ClientSession(
-                    timeout=timeout,
-                    connector=connector
-                )
+        if not self._session:
+            connector = aiohttp.TCPConnector(limit=3)
+            self._session = aiohttp.ClientSession(
+                timeout=aiohttp.ClientTimeout(total=10, connect=5),
+                connector=connector,
+            )
+        if self._config.enable_hardware_monitoring:
+            return await self.update_system_data()
+        return await self.test_agent()
 
-            await self._fetch_data()
-            self._is_connected = True
-            _LOG.info("Connected to LibreHardwareMonitor at %s", self._config.base_url)
-            return True
-
-        except Exception as ex:
-            _LOG.error("Failed to connect to LibreHardwareMonitor: %s", ex)
-            self._is_connected = False
-            return False
-
-    async def disconnect(self) -> None:
+    async def close(self) -> None:
         if self._session:
             await self._session.close()
             self._session = None
-        self._is_connected = False
-        _LOG.info("Disconnected from LibreHardwareMonitor")
 
-    async def _fetch_data(self) -> Dict[str, Any]:
-        if not self._session:
-            raise aiohttp.ClientError("Not connected")
-
-        url = f"{self._config.base_url}/data.json"
-        async with self._session.get(url) as response:
-            response.raise_for_status()
-            return await response.json()
-
-    def _parse_sensor_value(self, value_str: str) -> Optional[float]:
+    async def test_agent(self) -> bool:
+        session = self._session
+        close_after = False
+        if not session:
+            session = aiohttp.ClientSession(timeout=aiohttp.ClientTimeout(total=5))
+            close_after = True
         try:
-            parts = value_str.split()
-            if parts:
-                return float(parts[0])
-        except (ValueError, IndexError):
-            pass
-        return None
+            url = f"http://{self._config.host}:{AGENT_PORT}/health"
+            async with session.get(url) as resp:
+                return resp.status == 200
+        except Exception:
+            return False
+        finally:
+            if close_after:
+                await session.close()
 
-    def _find_sensor_by_text(self, hardware: Dict[str, Any], target_texts: List[str]) -> Optional[float]:
-        for sensor_group in hardware.get("Children", []):
-            for sensor in sensor_group.get("Children", []):
-                sensor_text = sensor.get("Text", "").lower()
-                for target in target_texts:
-                    if target.lower() in sensor_text:
-                        value = self._parse_sensor_value(sensor.get("Value", ""))
-                        if value is not None:
-                            return value
-        return None
-
-    def _detect_cpu_hardware(self, data: Dict[str, Any]) -> Optional[Dict[str, Any]]:
-        for hardware in data.get("Children", []):
-            for component in hardware.get("Children", []):
-                component_text = component.get("Text", "").lower()
-                
-                if any(keyword in component_text for keyword in ["intel", "amd", "processor", "core", "ryzen", "cpu"]):
-                    if not any(gpu_keyword in component_text for gpu_keyword in ["graphics", "radeon", "geforce", "gpu"]):
-                        self._system_data.detected_cpu_name = component.get("Text", "CPU")
-                        return component
-        return None
-
-    def _detect_gpu_hardware(self, data: Dict[str, Any]) -> Optional[Dict[str, Any]]:
-        for hardware in data.get("Children", []):
-            for component in hardware.get("Children", []):
-                component_text = component.get("Text", "").lower()
-                
-                if any(keyword in component_text for keyword in ["nvidia", "amd", "radeon", "geforce", "rtx", "gtx", "rx"]):
-                    if not any(integrated in component_text for integrated in ["uhd", "integrated", "igpu"]):
-                        self._system_data.detected_gpu_name = component.get("Text", "GPU")
-                        self._system_data.has_dedicated_gpu = True
-                        return component
-        return None
-
-    def _detect_memory_hardware(self, data: Dict[str, Any]) -> Optional[Dict[str, Any]]:
-        for hardware in data.get("Children", []):
-            for component in hardware.get("Children", []):
-                component_text = component.get("Text", "").lower()
-                
-                if "memory" in component_text and "cpu" not in component_text:
-                    return component
-        return None
-
-    def _detect_storage_hardware(self, data: Dict[str, Any]) -> Optional[Dict[str, Any]]:
-        storage_devices = []
-        
-        for hardware in data.get("Children", []):
-            for component in hardware.get("Children", []):
-                component_text = component.get("Text", "").lower()
-                
-                if any(keyword in component_text for keyword in ["ssd", "hdd", "nvme", "samsung", "wd", "crucial", "seagate", "toshiba", "kingston"]):
-                    used_space = self._find_sensor_by_text(component, ["used space"])
-                    if used_space is not None:
-                        storage_devices.append({
-                            "component": component,
-                            "name": component.get("Text", "Storage"),
-                            "used_percent": used_space
-                        })
-        
-        if storage_devices:
-            primary_storage = max(storage_devices, key=lambda x: x["used_percent"])
-            self._system_data.detected_storage_name = primary_storage["name"]
-            self._system_data.has_storage_data = True
-            return primary_storage["component"]
-        
-        return None
-
-    def _detect_active_network_interface(self, data: Dict[str, Any]) -> Optional[Dict[str, Any]]:
-        interfaces = []
-        
-        for hardware in data.get("Children", []):
-            for component in hardware.get("Children", []):
-                component_text = component.get("Text", "").lower()
-                
-                if any(keyword in component_text for keyword in ["ethernet", "wifi", "wireless", "network"]):
-                    if not any(virtual in component_text for virtual in ["vethernet", "virtual", "loopback"]):
-                        upload_speed = self._find_sensor_by_text(component, ["upload speed"])
-                        download_speed = self._find_sensor_by_text(component, ["download speed"])
-                        utilization = self._find_sensor_by_text(component, ["network utilization"])
-                        
-                        activity_score = 0
-                        if upload_speed and upload_speed > 0:
-                            activity_score += upload_speed
-                        if download_speed and download_speed > 0:
-                            activity_score += download_speed * 10
-                        if utilization and utilization > 0:
-                            activity_score += utilization
-                        
-                        interfaces.append({
-                            "component": component,
-                            "name": component.get("Text", "Network"),
-                            "activity": activity_score
-                        })
-        
-        if interfaces:
-            active_interfaces = [iface for iface in interfaces if iface["activity"] > 0]
-            if active_interfaces:
-                primary_interface = max(active_interfaces, key=lambda x: x["activity"])
-            else:
-                ethernet_interfaces = [iface for iface in interfaces if "ethernet" in iface["name"].lower()]
-                primary_interface = ethernet_interfaces[0] if ethernet_interfaces else interfaces[0]
-            
-            self._system_data.detected_network_name = primary_interface["name"]
-            self._system_data.has_network_data = True
-            return primary_interface["component"]
-        
-        return None
-
-    def _detect_motherboard_hardware(self, data: Dict[str, Any]) -> Optional[Dict[str, Any]]:
-        for hardware in data.get("Children", []):
-            for component in hardware.get("Children", []):
-                component_text = component.get("Text", "").lower()
-                
-                if any(keyword in component_text for keyword in ["z590", "b550", "x570", "asus", "gigabyte", "msi", "asrock", "it8689", "nct"]):
-                    return component
-        return None
-
-    def _extract_storage_size_from_name(self, hardware_name: str) -> Optional[float]:
+    async def test_lhm(self) -> dict[str, Any]:
+        session = self._session
+        close_after = False
+        if not session:
+            session = aiohttp.ClientSession(timeout=aiohttp.ClientTimeout(total=10))
+            close_after = True
         try:
-            size_patterns = [
-                r'(\d+(?:\.\d+)?)\s*TB',
-                r'(\d+(?:\.\d+)?)\s*GB',
-                r'(\d+(?:\.\d+)?)\s*tb',
-                r'(\d+(?:\.\d+)?)\s*gb'
-            ]
-            
-            for pattern in size_patterns:
-                match = re.search(pattern, hardware_name, re.IGNORECASE)
-                if match:
-                    size_value = float(match.group(1))
-                    if 'tb' in pattern.lower():
-                        size_value *= 1000
-                    return size_value
-        except:
-            pass
-        return None
-
-    def _parse_cpu_data(self, cpu_hardware: Dict[str, Any]) -> None:
-        cpu_temp = self._find_sensor_by_text(cpu_hardware, [
-            "core average", "cpu package", "package", "tctl", "tdie"
-        ])
-        if cpu_temp:
-            self._system_data.cpu_temp = cpu_temp
-        
-        cpu_load = self._find_sensor_by_text(cpu_hardware, [
-            "cpu total", "total", "cpu usage", "processor usage"
-        ])
-        if cpu_load:
-            self._system_data.cpu_load = cpu_load
-            
-        clocks = []
-        for sensor_group in cpu_hardware.get("Children", []):
-            group_text = sensor_group.get("Text", "").lower()
-            if "clocks" in group_text or "frequencies" in group_text:
-                for sensor in sensor_group.get("Children", []):
-                    sensor_text = sensor.get("Text", "").lower()
-                    if any(core_indicator in sensor_text for core_indicator in ["core", "cpu"]) and "bus" not in sensor_text:
-                        clock = self._parse_sensor_value(sensor.get("Value", ""))
-                        if clock is not None and clock > 100:
-                            clocks.append(clock)
-        
-        if clocks:
-            self._system_data.cpu_clock = sum(clocks) / len(clocks)
-
-    def _parse_gpu_data(self, gpu_hardware: Dict[str, Any]) -> None:
-        gpu_temp = self._find_sensor_by_text(gpu_hardware, [
-            "gpu core", "gpu", "core", "temperature"
-        ])
-        if gpu_temp:
-            self._system_data.gpu_temp = gpu_temp
-            
-        gpu_load = self._find_sensor_by_text(gpu_hardware, [
-            "gpu core", "gpu", "core load", "3d load", "cuda load"
-        ])
-        if gpu_load:
-            self._system_data.gpu_load = gpu_load
-
-    def _parse_memory_data(self, memory_hardware: Dict[str, Any]) -> None:
-        memory_used = self._find_sensor_by_text(memory_hardware, ["memory used", "used"])
-        memory_available = self._find_sensor_by_text(memory_hardware, ["memory available", "available"])
-        
-        if memory_used:
-            self._system_data.memory_used = memory_used
-            
-        if memory_used and memory_available:
-            self._system_data.memory_total = memory_used + memory_available
-
-    def _parse_storage_data(self, storage_hardware: Dict[str, Any]) -> None:
-        used_percent = self._find_sensor_by_text(storage_hardware, ["used space", "usage"])
-        if used_percent:
-            self._system_data.storage_used_percent = used_percent
-            
-            hardware_name = storage_hardware.get("Text", "")
-            total_size = self._extract_storage_size_from_name(hardware_name)
-            
-            if total_size:
-                self._system_data.storage_total = total_size
-                self._system_data.storage_used = (used_percent / 100) * total_size
-
-    def _parse_network_data(self, network_hardware: Dict[str, Any]) -> None:
-        upload_speed = self._find_sensor_by_text(network_hardware, ["upload speed", "tx", "sent"])
-        if upload_speed is not None:
-            is_megabytes = False
-            for sensor_group in network_hardware.get("Children", []):
-                for sensor in sensor_group.get("Children", []):
-                    if any(term in sensor.get("Text", "").lower() for term in ["upload", "tx", "sent"]):
-                        value_str = sensor.get("Value", "")
-                        if "MB/s" in value_str or "Mbps" in value_str:
-                            is_megabytes = True
-                        break
-            
-            if is_megabytes:
-                self._system_data.network_up = upload_speed * 8
-            else:
-                self._system_data.network_up = upload_speed / 125
-            
-        download_speed = self._find_sensor_by_text(network_hardware, ["download speed", "rx", "received"])
-        if download_speed is not None:
-            is_megabytes = False
-            for sensor_group in network_hardware.get("Children", []):
-                for sensor in sensor_group.get("Children", []):
-                    if any(term in sensor.get("Text", "").lower() for term in ["download", "rx", "received"]):
-                        value_str = sensor.get("Value", "")
-                        if "MB/s" in value_str or "Mbps" in value_str:
-                            is_megabytes = True
-                        break
-            
-            if is_megabytes:
-                self._system_data.network_down = download_speed * 8
-            else:
-                self._system_data.network_down = download_speed / 125
-
-    def _parse_motherboard_data(self, motherboard_hardware: Dict[str, Any]) -> None:
-        temperatures = []
-        fan_speeds = []
-        
-        for chip in motherboard_hardware.get("Children", []):
-            chip_text = chip.get("Text", "").lower()
-            
-            if any(chip_type in chip_text for chip_type in ["ite", "nct", "super i/o"]):
-                for sensor_group in chip.get("Children", []):
-                    group_text = sensor_group.get("Text", "").lower()
-                    
-                    if "temperatures" in group_text:
-                        for sensor in sensor_group.get("Children", []):
-                            temp = self._parse_sensor_value(sensor.get("Value", ""))
-                            if temp is not None and 20 < temp < 100:
-                                temperatures.append(temp)
-                    
-                    elif "fans" in group_text:
-                        for sensor in sensor_group.get("Children", []):
-                            fan_speed = self._parse_sensor_value(sensor.get("Value", ""))
-                            if fan_speed is not None and fan_speed > 0:
-                                fan_speeds.append(fan_speed)
-        
-        if temperatures:
-            self._system_data.motherboard_temp_avg = sum(temperatures) / len(temperatures)
-            self._system_data.motherboard_temp_max = max(temperatures)
-        
-        if fan_speeds:
-            self._system_data.fan_speeds = fan_speeds
-
-    def _parse_cpu_power_data(self, cpu_hardware: Dict[str, Any]) -> None:
-        cpu_power = self._find_sensor_by_text(cpu_hardware, ["cpu package", "package power", "cpu power"])
-        if cpu_power:
-            self._system_data.cpu_power = cpu_power
-
-    def _parse_storage_temperature(self, storage_hardware: Dict[str, Any]) -> None:
-        storage_temp = self._find_sensor_by_text(storage_hardware, ["temperature"])
-        if storage_temp:
-            self._system_data.storage_temp = storage_temp
+            url = f"http://{self._config.host}:{self._config.port}/data.json"
+            async with session.get(url) as resp:
+                if resp.status != 200:
+                    return {"success": False, "error": f"HTTP {resp.status}"}
+                data = await resp.json()
+                count = self._count_sensors(data)
+                return {"success": True, "sensor_count": count}
+        except aiohttp.ClientConnectorError:
+            return {"success": False, "error": f"Connection refused at {self._config.host}:{self._config.port}"}
+        except Exception as err:
+            return {"success": False, "error": str(err)}
+        finally:
+            if close_after:
+                await session.close()
 
     async def update_system_data(self) -> bool:
+        if not self._session:
+            return False
         try:
-            raw_data = await self._fetch_data()
-            
-            old_data = self._system_data
-            self._system_data = HTCPSystemData()
-            
-            if old_data.last_updated > 0:
-                self._system_data.has_dedicated_gpu = old_data.has_dedicated_gpu
-                self._system_data.has_network_data = old_data.has_network_data
-                self._system_data.has_storage_data = old_data.has_storage_data
-                self._system_data.detected_cpu_name = old_data.detected_cpu_name
-                self._system_data.detected_gpu_name = old_data.detected_gpu_name
-                self._system_data.detected_storage_name = old_data.detected_storage_name
-                self._system_data.detected_network_name = old_data.detected_network_name
-            
-            if "Children" in raw_data:
-                cpu_hardware = self._detect_cpu_hardware(raw_data)
-                if cpu_hardware:
-                    self._parse_cpu_data(cpu_hardware)
-                    self._parse_cpu_power_data(cpu_hardware)
-                
-                gpu_hardware = self._detect_gpu_hardware(raw_data)
-                if gpu_hardware:
-                    self._parse_gpu_data(gpu_hardware)
-                
-                memory_hardware = self._detect_memory_hardware(raw_data)
-                if memory_hardware:
-                    self._parse_memory_data(memory_hardware)
-                
-                storage_hardware = self._detect_storage_hardware(raw_data)
-                if storage_hardware:
-                    self._parse_storage_data(storage_hardware)
-                    self._parse_storage_temperature(storage_hardware)
-                
-                network_hardware = self._detect_active_network_interface(raw_data)
-                if network_hardware:
-                    self._parse_network_data(network_hardware)
-                
-                motherboard_hardware = self._detect_motherboard_hardware(raw_data)
-                if motherboard_hardware:
-                    self._parse_motherboard_data(motherboard_hardware)
-            
-            self._system_data.last_updated = time.time()
-            _LOG.debug("System data updated successfully")
-            return True
-            
-        except Exception as ex:
-            _LOG.error("Failed to update system data: %s", ex)
-            self._is_connected = False
+            url = f"http://{self._config.host}:{self._config.port}/data.json"
+            async with self._session.get(url) as resp:
+                resp.raise_for_status()
+                raw = await resp.json()
+        except Exception as err:
+            _LOG.debug("LHM fetch failed: %s", err)
             return False
 
-    async def send_remote_command(self, command: str) -> bool:
+        old = self._system_data
+        sd = SystemData()
+        sd.has_dedicated_gpu = old.has_dedicated_gpu
+        sd.detected_cpu_name = old.detected_cpu_name
+        sd.detected_gpu_name = old.detected_gpu_name
+
+        if "Children" in raw:
+            cpu = self._detect_cpu(raw)
+            if cpu:
+                sd.detected_cpu_name = cpu.get("Text", "CPU")
+                self._parse_cpu(cpu, sd)
+
+            gpu = self._detect_gpu(raw)
+            if gpu:
+                sd.detected_gpu_name = gpu.get("Text", "GPU")
+                sd.has_dedicated_gpu = True
+                self._parse_gpu(gpu, sd)
+
+            mem = self._detect_memory(raw)
+            if mem:
+                self._parse_memory(mem, sd)
+
+            storage = self._detect_storage(raw)
+            if storage:
+                self._parse_storage(storage, sd)
+
+            net = self._detect_network(raw)
+            if net:
+                self._parse_network(net, sd)
+
+            mb = self._detect_motherboard(raw)
+            if mb:
+                self._parse_motherboard(mb, sd)
+
+        sd.last_updated = time.time()
+        self._system_data = sd
+        return True
+
+    async def send_command(self, command: str) -> bool:
+        if not self._session:
+            return False
         try:
-            agent_url = f"http://{self._config.host}:8086/command"
-            
-            if not self._session:
-                ssl_context = ssl.create_default_context(cafile=certifi.where())
-                connector = aiohttp.TCPConnector(ssl=ssl_context)
-                timeout = aiohttp.ClientTimeout(total=10)
-                self._session = aiohttp.ClientSession(
-                    timeout=timeout,
-                    connector=connector
-                )
-            
-            async with self._session.post(agent_url, json={"command": command}) as response:
-                if response.status == 200:
-                    result = await response.json()
-                    _LOG.info(f"Remote command '{command}' executed successfully: {result}")
-                    return True
-                else:
-                    _LOG.error(f"Remote command '{command}' failed with status {response.status}")
-                    return False
-                    
-        except Exception as ex:
-            _LOG.error(f"Failed to send remote command '{command}': {ex}")
+            url = f"http://{self._config.host}:{AGENT_PORT}/command"
+            async with self._session.post(url, json={"command": command}) as resp:
+                return resp.status == 200
+        except Exception as err:
+            _LOG.debug("Command '%s' failed: %s", command, err)
             return False
 
     async def power_on_wol(self) -> bool:
         if not self._config.wol_enabled:
-            _LOG.warning("WoL not configured - no MAC address provided")
             return False
-        
         try:
             send_magic_packet(self._config.mac_address)
-            _LOG.info(f"WoL magic packet sent to {self._config.mac_address}")
+            _LOG.info("WoL packet sent to %s", self._config.mac_address)
             return True
-        except Exception as ex:
-            _LOG.error(f"Failed to send WoL packet: {ex}")
+        except Exception as err:
+            _LOG.error("WoL failed: %s", err)
             return False
 
-    async def launch_application(self, app_name: str) -> bool:
-        return await self.send_remote_command(f"app_{app_name}")
+    # --- Hardware detection by HardwareId ---
 
-    async def set_volume(self, volume: int) -> bool:
-        return await self.send_remote_command(f"set_volume:{volume}")
+    CPU_PREFIXES = ("/intelcpu/", "/amdcpu/")
+    GPU_PREFIXES = ("/gpu-nvidia/", "/gpu-amd/", "/gpu-intel/")
+    MEMORY_PREFIX = "/ram"
+    STORAGE_PREFIXES = ("/nvme/", "/hdd/", "/ssd/")
+    NETWORK_PREFIX = "/nic/"
+    MOTHERBOARD_PREFIX = "/lpc/"
 
-    async def mute_toggle(self) -> bool:
-        return await self.send_remote_command("mute_toggle")
+    def _find_components(self, data: dict, prefixes: tuple[str, ...]) -> list[dict]:
+        results = []
+        for hw in data.get("Children", []):
+            for comp in hw.get("Children", []):
+                hw_id = comp.get("HardwareId", "").lower()
+                if any(hw_id.startswith(p) for p in prefixes):
+                    results.append(comp)
+        return results
 
-    async def power_sleep(self) -> bool:
-        return await self.send_remote_command("power_sleep")
+    def _detect_cpu(self, data: dict) -> dict | None:
+        cpus = self._find_components(data, self.CPU_PREFIXES)
+        return cpus[0] if cpus else None
 
-    async def power_wake(self) -> bool:
-        return await self.send_remote_command("power_wake")
+    def _detect_gpu(self, data: dict) -> dict | None:
+        gpus = self._find_components(data, self.GPU_PREFIXES)
+        return gpus[0] if gpus else None
 
-    @property
-    def is_connected(self) -> bool:
-        return self._is_connected
+    def _detect_memory(self, data: dict) -> dict | None:
+        for hw in data.get("Children", []):
+            for comp in hw.get("Children", []):
+                hw_id = comp.get("HardwareId", "").lower()
+                if hw_id == self.MEMORY_PREFIX or hw_id.startswith(self.MEMORY_PREFIX + "/"):
+                    return comp
+        return None
 
-    @property
-    def system_data(self) -> HTCPSystemData:
-        return self._system_data
+    def _detect_storage(self, data: dict) -> dict | None:
+        devices = []
+        for comp in self._find_components(data, self.STORAGE_PREFIXES):
+            used = self._find_sensor(comp, ["used space"])
+            if used is not None:
+                devices.append({"component": comp, "used": used})
+        if devices:
+            return max(devices, key=lambda x: x["used"])["component"]
+        return None
+
+    def _detect_network(self, data: dict) -> dict | None:
+        interfaces = []
+        for comp in self._find_components(data, (self.NETWORK_PREFIX,)):
+            text = comp.get("Text", "").lower()
+            if any(v in text for v in ["vethernet", "virtual", "loopback"]):
+                continue
+            dl = self._find_sensor(comp, ["download speed"]) or 0
+            ul = self._find_sensor(comp, ["upload speed"]) or 0
+            interfaces.append({"component": comp, "activity": dl * 10 + ul})
+        if interfaces:
+            active = [i for i in interfaces if i["activity"] > 0]
+            if active:
+                return max(active, key=lambda x: x["activity"])["component"]
+            return interfaces[0]["component"]
+        return None
+
+    def _detect_motherboard(self, data: dict) -> dict | None:
+        chips = self._find_components(data, (self.MOTHERBOARD_PREFIX,))
+        return chips[0] if chips else None
+
+    def _find_sensor(self, hardware: dict, targets: list[str]) -> float | None:
+        for group in hardware.get("Children", []):
+            for sensor in group.get("Children", []):
+                text = sensor.get("Text", "").lower()
+                for target in targets:
+                    if target.lower() in text:
+                        val = self._parse_value(sensor.get("Value", ""))
+                        if val is not None:
+                            return val
+        return None
+
+    @staticmethod
+    def _parse_value(value_str: str) -> float | None:
+        try:
+            return float(value_str.split()[0])
+        except (ValueError, IndexError):
+            return None
+
+    def _parse_cpu(self, hw: dict, sd: SystemData) -> None:
+        sd.cpu_temp = self._find_sensor(hw, ["core average", "cpu package", "package", "tctl", "tdie"])
+        sd.cpu_load = self._find_sensor(hw, ["cpu total", "total", "cpu usage"])
+        sd.cpu_power = self._find_sensor(hw, ["cpu package", "package power", "cpu power"])
+
+        clocks = []
+        for group in hw.get("Children", []):
+            if "clock" in group.get("Text", "").lower():
+                for sensor in group.get("Children", []):
+                    text = sensor.get("Text", "").lower()
+                    if ("core" in text or "cpu" in text) and "bus" not in text:
+                        val = self._parse_value(sensor.get("Value", ""))
+                        if val and val > 100:
+                            clocks.append(val)
+        if clocks:
+            sd.cpu_clock = sum(clocks) / len(clocks)
+
+    def _parse_gpu(self, hw: dict, sd: SystemData) -> None:
+        sd.gpu_temp = self._find_sensor(hw, ["gpu core", "gpu", "core", "temperature"])
+        sd.gpu_load = self._find_sensor(hw, ["gpu core", "gpu", "core load", "3d load"])
+
+    def _parse_memory(self, hw: dict, sd: SystemData) -> None:
+        used = self._find_sensor(hw, ["memory used", "used"])
+        avail = self._find_sensor(hw, ["memory available", "available"])
+        if used:
+            sd.memory_used = used
+        if used and avail:
+            sd.memory_total = used + avail
+
+    def _parse_storage(self, hw: dict, sd: SystemData) -> None:
+        used_pct = self._find_sensor(hw, ["used space", "usage"])
+        if used_pct:
+            sd.storage_used_percent = used_pct
+            name = hw.get("Text", "")
+            total = self._extract_size(name)
+            if total:
+                sd.storage_total = total
+                sd.storage_used = (used_pct / 100) * total
+        sd.storage_temp = self._find_sensor(hw, ["temperature"])
+
+    def _parse_network(self, hw: dict, sd: SystemData) -> None:
+        ul = self._find_sensor(hw, ["upload speed", "tx", "sent"])
+        dl = self._find_sensor(hw, ["download speed", "rx", "received"])
+
+        def to_mbps(value: float | None, keywords: list[str]) -> float | None:
+            if value is None:
+                return None
+            for group in hw.get("Children", []):
+                for sensor in group.get("Children", []):
+                    if any(k in sensor.get("Text", "").lower() for k in keywords):
+                        v = sensor.get("Value", "")
+                        if "MB/s" in v or "Mbps" in v:
+                            return value * 8
+                        return value / 125
+            return value / 125
+
+        sd.network_up = to_mbps(ul, ["upload", "tx", "sent"])
+        sd.network_down = to_mbps(dl, ["download", "rx", "received"])
+
+    def _parse_motherboard(self, hw: dict, sd: SystemData) -> None:
+        temps = []
+        fans = []
+        for group in hw.get("Children", []):
+            gt = group.get("Text", "").lower()
+            if "temperature" in gt:
+                for s in group.get("Children", []):
+                    v = self._parse_value(s.get("Value", ""))
+                    if v and 20 < v < 100:
+                        temps.append(v)
+            elif "fan" in gt:
+                for s in group.get("Children", []):
+                    v = self._parse_value(s.get("Value", ""))
+                    if v and v > 0:
+                        fans.append(v)
+        if temps:
+            sd.motherboard_temp_avg = sum(temps) / len(temps)
+            sd.motherboard_temp_max = max(temps)
+        if fans:
+            sd.fan_speeds = fans
+
+    @staticmethod
+    def _extract_size(name: str) -> float | None:
+        match = re.search(r'(\d+(?:\.\d+)?)\s*(TB|GB)', name, re.IGNORECASE)
+        if match:
+            val = float(match.group(1))
+            if match.group(2).upper() == "TB":
+                val *= 1000
+            return val
+        return None
+
+    @staticmethod
+    def _count_sensors(data: dict) -> int:
+        count = 0
+        if isinstance(data, dict):
+            if "Value" in data and data.get("Value", "").strip():
+                count += 1
+            for child in data.get("Children", []):
+                count += HTCPClient._count_sensors(child)
+        return count

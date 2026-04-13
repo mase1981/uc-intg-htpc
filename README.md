@@ -37,19 +37,12 @@ Choose your setup based on your needs:
 - **Full Monitoring + Control** - Complete system monitoring with media player entity + remote control
 - **Remote Control Only** - Lightweight Windows control without hardware monitoring requirements
 
-### 📊 **System Monitoring** (Media Player Entity - Optional)
+### 📊 **System Monitoring** (Media Player + Sensor Entities - Optional)
 
-#### **Real-time Performance Monitoring**
-- **CPU Monitoring** - Temperature, load, and clock speed
-- **GPU Monitoring** - Dedicated GPU detection with temperature and load tracking
-- **Memory Usage** - RAM utilization with detailed breakdown
-- **Storage Activity** - Disk usage, temperature, and activity monitoring
-- **Network Activity** - Upload/download speeds and utilization
-- **Temperature Overview** - CPU, storage, and motherboard temperatures
-- **Fan Monitoring** - Active fan detection with RPM readings
-- **Power Consumption** - CPU package power draw (when available)
+#### **Dynamic Hardware Discovery**
+Hardware is automatically detected using LibreHardwareMonitor's HardwareId system — no manual configuration needed. Works with any CPU (Intel/AMD), any GPU (NVIDIA/AMD/Intel Arc), any storage, and any network adapter.
 
-#### **8 Monitoring Views**
+#### **9 Monitoring Views** (Media Player Entity)
 Switch between views using SOURCE selection:
 - **System Overview** - CPU temp/load, CPU power, Memory usage
 - **CPU Performance** - Temperature, Load percentage, Clock speed
@@ -59,6 +52,15 @@ Switch between views using SOURCE selection:
 - **Network Activity** - Upload/Download speeds
 - **Temperature Overview** - CPU, Storage, Motherboard temperatures
 - **Fan Monitoring** - Active fans count, Average/Maximum speeds
+- **Power Consumption** - CPU package power draw
+
+#### **10 Sensor Entities**
+Individual sensors available for automations and dashboard display:
+- CPU Temperature, CPU Load, CPU Power
+- GPU Temperature, GPU Load
+- Memory Usage, Storage Usage
+- Network Download, Network Upload
+- Fan Speed
 
 ### 🎮 **Remote Control** (Remote Entity - Always Available)
 
@@ -182,8 +184,9 @@ For detailed agent setup and troubleshooting, see: [`agents/README_Agent.md`](ag
 - Setup fails if required services unreachable
 
 4. Integration will create entities:
-   - **HTPC System Monitor** - `htpc_monitor` (media player, only if monitoring enabled)
-   - **HTPC Advanced Remote** - `htpc_remote` (remote control, always created)
+   - **HTPC Remote** - Remote entity (always created)
+   - **HTPC System Monitor** - Media player entity (only if monitoring enabled)
+   - **10 Sensor Entities** - CPU, GPU, Memory, Storage, Network, Fan sensors (only if monitoring enabled)
 
 ### Step 4: Enable Wake-on-LAN (Optional)
 
@@ -225,11 +228,22 @@ To enable remote power-on functionality:
 
 The media player entity provides system monitoring:
 
-- **8 Monitoring Views** - Switch via SOURCE selection
+- **9 Monitoring Views** - Switch via SOURCE selection
 - **Real-time Updates** - 5-second monitoring refresh
 - **Power Management** - Sleep/Wake controls
 - **Volume Control** - System volume adjustment
 - **System Status** - Current system state display
+
+### Sensor Entities (Only in Monitoring Mode)
+
+10 individual sensor entities for automations and dashboard widgets:
+
+- **CPU** - Temperature, Load (%), Power (W)
+- **GPU** - Temperature, Load (%)
+- **Memory** - Usage (%)
+- **Storage** - Usage (%)
+- **Network** - Download (Mbps), Upload (Mbps)
+- **Fans** - Average Speed (RPM)
 
 ### Remote Control Entity (Always Available)
 
