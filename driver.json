@@ -1,5 +1,5 @@
 {
-  "driver_id": "uc-intg-htpc",
+  "driver_id": "uc_intg_htpc",
   "version": "2.0.0",
   "min_core_api": "0.22.0",
   "name": {
