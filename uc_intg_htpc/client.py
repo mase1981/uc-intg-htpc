@@ -5,6 +5,7 @@ LibreHardwareMonitor and HTPC Agent HTTP client.
 :license: MPL-2.0, see LICENSE for more details.
 """
 
+import asyncio
 import logging
 import re
 import time
@@ -162,16 +163,29 @@ class HTCPClient:
         self._system_data = sd
         return True
 
+    FIRE_AND_FORGET_COMMANDS = {"power_sleep", "power_hibernate", "power_shutdown", "power_restart"}
+
     async def send_command(self, command: str) -> bool:
         if not self._session:
             return False
+        url = f"http://{self._config.host}:{AGENT_PORT}/command"
+        if command in self.FIRE_AND_FORGET_COMMANDS:
+            return await self._send_fire_and_forget(url, command)
         try:
-            url = f"http://{self._config.host}:{AGENT_PORT}/command"
             async with self._session.post(url, json={"command": command}) as resp:
                 return resp.status == 200
         except Exception as err:
             _LOG.debug("Command '%s' failed: %s", command, err)
             return False
+
+    async def _send_fire_and_forget(self, url: str, command: str) -> bool:
+        try:
+            timeout = aiohttp.ClientTimeout(total=3, connect=2)
+            async with self._session.post(url, json={"command": command}, timeout=timeout) as resp:
+                return resp.status == 200
+        except (asyncio.TimeoutError, aiohttp.ClientError):
+            _LOG.info("Power command '%s' sent (host going offline as expected)", command)
+            return True
 
     async def power_on_wol(self) -> bool:
         if not self._config.wol_enabled:
