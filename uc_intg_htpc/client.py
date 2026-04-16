@@ -219,6 +219,10 @@ class HTCPClient:
                 hw_id = comp.get("HardwareId", "").lower()
                 if any(hw_id.startswith(p) for p in prefixes):
                     results.append(comp)
+                for sub in comp.get("Children", []):
+                    sub_id = sub.get("HardwareId", "").lower()
+                    if sub_id and any(sub_id.startswith(p) for p in prefixes):
+                        results.append(sub)
         return results
 
     def _detect_cpu(self, data: dict) -> dict | None:
@@ -287,6 +291,11 @@ class HTCPClient:
                 hw_id = comp.get("HardwareId", "")
                 groups = [g.get("Text", "?") for g in comp.get("Children", [])]
                 _LOG.info("LHM component: '%s' [%s] groups=%s", comp.get("Text", "?"), hw_id, groups)
+                for sub in comp.get("Children", []):
+                    sub_id = sub.get("HardwareId", "")
+                    if sub_id:
+                        sub_groups = [g.get("Text", "?") for g in sub.get("Children", [])]
+                        _LOG.info("  LHM sub-hardware: '%s' [%s] groups=%s", sub.get("Text", "?"), sub_id, sub_groups)
 
     def _find_sensor(
         self, hardware: dict, targets: list[str], group_filter: str | None = None
@@ -318,7 +327,7 @@ class HTCPClient:
             hw, ["cpu total", "total", "cpu usage"], group_filter="load"
         )
         sd.cpu_power = self._find_sensor(
-            hw, ["cpu package", "package power", "cpu power"], group_filter="power"
+            hw, ["cpu package", "package power", "cpu power", "package"], group_filter="power"
         )
 
         clocks = []

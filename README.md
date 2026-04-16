@@ -258,21 +258,39 @@ The remote entity provides comprehensive Windows control:
 
 ### Custom Application Launching
 
-Use the **Send Command** feature to launch any Windows application:
+#### Option 1: Shortcuts (Recommended)
 
-**Format**: `launch_exe:FULL_PATH_TO_EXECUTABLE`
+Launch any application using Windows shortcut files (`.lnk`). This avoids the 20-character command name limit.
+
+**Setup:**
+1. Create a `shortcuts` folder next to `HTCP_Agent.exe` (e.g., `C:\HTCP_Agent\shortcuts\`)
+2. Create or copy Windows shortcuts into this folder (right-click → New → Shortcut, or copy existing `.lnk` files)
+3. Name the shortcut file with a short name, e.g., `Chrome.lnk`, `Plex.lnk`, `Steam.lnk`
+
+**Usage:**
+- In the Remote's **Send Command** widget, type the shortcut name **without** `.lnk`
+- Example: type `Chrome` to launch `shortcuts\Chrome.lnk`
 
 **Examples:**
-```bash
-# Launch Steam
-launch_exe:"C:\Program Files (x86)\Steam\steam.exe"
+| Shortcut File | Send Command | Launches |
+|---|---|---|
+| `Chrome.lnk` | `Chrome` | Google Chrome |
+| `Steam.lnk` | `Steam` | Steam |
+| `Plex.lnk` | `Plex` | Plex Desktop |
+| `VLC.lnk` | `VLC` | VLC Media Player |
 
-# Launch VLC Media Player
-launch_exe:"C:\Program Files\VideoLAN\VLC\vlc.exe"
+> **Note:** Requires HTPC Agent v3.0.0 or later.
 
-# Launch websites
-launch_url:https://www.netflix.com
-launch_url:https://www.youtube.com
+#### Option 2: Direct Launch Commands
+
+Use the **Send Command** feature with full paths (limited to 20 characters):
+
+**Format**: `launch_exe:PATH` or `launch_url:URL`
+
+**Examples:**
+```
+launch_url:netflix.com
+launch_url:youtube.com
 ```
 
 ### Switching Between Modes
