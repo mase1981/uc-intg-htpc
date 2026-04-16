@@ -77,6 +77,7 @@ data/
 # Integration specific
 artifacts/
 version_info.txt
+agents/htpc_agent.py
 
 # Testing files (keep local only, never push to repository)
 tests/
