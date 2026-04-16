@@ -218,7 +218,16 @@ class HTCPClient:
 
     def _detect_cpu(self, data: dict) -> dict | None:
         cpus = self._find_components(data, self.CPU_PREFIXES)
-        return cpus[0] if cpus else None
+        if cpus:
+            return cpus[0]
+        for hw in data.get("Children", []):
+            for comp in hw.get("Children", []):
+                text = comp.get("Text", "").lower()
+                if any(k in text for k in ["cpu", "processor", "ryzen", "core i", "xeon"]):
+                    hw_id = comp.get("HardwareId", "").lower()
+                    if not any(hw_id.startswith(p) for p in self.GPU_PREFIXES):
+                        return comp
+        return None
 
     def _detect_gpu(self, data: dict) -> dict | None:
         gpus = self._find_components(data, self.GPU_PREFIXES)
@@ -230,12 +239,19 @@ class HTCPClient:
                 hw_id = comp.get("HardwareId", "").lower()
                 if hw_id == self.MEMORY_PREFIX or hw_id.startswith(self.MEMORY_PREFIX + "/"):
                     return comp
+        for hw in data.get("Children", []):
+            for comp in hw.get("Children", []):
+                text = comp.get("Text", "").lower()
+                if "memory" in text or text == "ram":
+                    return comp
         return None
 
     def _detect_storage(self, data: dict) -> dict | None:
         devices = []
         for comp in self._find_components(data, self.STORAGE_PREFIXES):
-            used = self._find_sensor(comp, ["used space"])
+            used = self._find_sensor(comp, ["used space"], group_filter="load")
+            if used is None:
+                used = self._find_sensor(comp, ["used space"])
             if used is not None:
                 devices.append({"component": comp, "used": used})
         if devices:
@@ -262,8 +278,12 @@ class HTCPClient:
         chips = self._find_components(data, (self.MOTHERBOARD_PREFIX,))
         return chips[0] if chips else None
 
-    def _find_sensor(self, hardware: dict, targets: list[str]) -> float | None:
+    def _find_sensor(
+        self, hardware: dict, targets: list[str], group_filter: str | None = None
+    ) -> float | None:
         for group in hardware.get("Children", []):
+            if group_filter and group_filter not in group.get("Text", "").lower():
+                continue
             for sensor in group.get("Children", []):
                 text = sensor.get("Text", "").lower()
                 for target in targets:
@@ -281,9 +301,15 @@ class HTCPClient:
             return None
 
     def _parse_cpu(self, hw: dict, sd: SystemData) -> None:
-        sd.cpu_temp = self._find_sensor(hw, ["core average", "cpu package", "package", "tctl", "tdie"])
-        sd.cpu_load = self._find_sensor(hw, ["cpu total", "total", "cpu usage"])
-        sd.cpu_power = self._find_sensor(hw, ["cpu package", "package power", "cpu power"])
+        sd.cpu_temp = self._find_sensor(
+            hw, ["core average", "cpu package", "package", "tctl", "tdie"], group_filter="temperature"
+        )
+        sd.cpu_load = self._find_sensor(
+            hw, ["cpu total", "total", "cpu usage"], group_filter="load"
+        )
+        sd.cpu_power = self._find_sensor(
+            hw, ["cpu package", "package power", "cpu power"], group_filter="power"
+        )
 
         clocks = []
         for group in hw.get("Children", []):
@@ -298,19 +324,23 @@ class HTCPClient:
             sd.cpu_clock = sum(clocks) / len(clocks)
 
     def _parse_gpu(self, hw: dict, sd: SystemData) -> None:
-        sd.gpu_temp = self._find_sensor(hw, ["gpu core", "gpu", "core", "temperature"])
-        sd.gpu_load = self._find_sensor(hw, ["gpu core", "gpu", "core load", "3d load"])
+        sd.gpu_temp = self._find_sensor(
+            hw, ["gpu core", "gpu", "core", "temperature"], group_filter="temperature"
+        )
+        sd.gpu_load = self._find_sensor(
+            hw, ["gpu core", "gpu", "core load", "3d load"], group_filter="load"
+        )
 
     def _parse_memory(self, hw: dict, sd: SystemData) -> None:
-        used = self._find_sensor(hw, ["memory used", "used"])
-        avail = self._find_sensor(hw, ["memory available", "available"])
+        used = self._find_sensor(hw, ["memory used", "used"], group_filter="data")
+        avail = self._find_sensor(hw, ["memory available", "available"], group_filter="data")
         if used:
             sd.memory_used = used
         if used and avail:
             sd.memory_total = used + avail
 
     def _parse_storage(self, hw: dict, sd: SystemData) -> None:
-        used_pct = self._find_sensor(hw, ["used space", "usage"])
+        used_pct = self._find_sensor(hw, ["used space", "usage"], group_filter="load")
         if used_pct:
             sd.storage_used_percent = used_pct
             name = hw.get("Text", "")
@@ -318,11 +348,15 @@ class HTCPClient:
             if total:
                 sd.storage_total = total
                 sd.storage_used = (used_pct / 100) * total
-        sd.storage_temp = self._find_sensor(hw, ["temperature"])
+        sd.storage_temp = self._find_sensor(hw, ["temperature"], group_filter="temperature")
 
     def _parse_network(self, hw: dict, sd: SystemData) -> None:
-        ul = self._find_sensor(hw, ["upload speed", "tx", "sent"])
-        dl = self._find_sensor(hw, ["download speed", "rx", "received"])
+        ul = self._find_sensor(hw, ["upload speed", "tx", "sent"], group_filter="throughput")
+        if ul is None:
+            ul = self._find_sensor(hw, ["upload speed", "tx", "sent"], group_filter="data")
+        dl = self._find_sensor(hw, ["download speed", "rx", "received"], group_filter="throughput")
+        if dl is None:
+            dl = self._find_sensor(hw, ["download speed", "rx", "received"], group_filter="data")
 
         def to_mbps(value: float | None, keywords: list[str]) -> float | None:
             if value is None:
