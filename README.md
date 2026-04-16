@@ -135,10 +135,10 @@ docker run -d --name uc-htpc --restart unless-stopped --network host -v htpc-con
 
 **IMPORTANT**: HTPC Agent must be running on your Windows PC before configuring the integration.
 
-1. Download [HTCP_Agent.exe](https://github.com/mase1981/uc-intg-htpc/blob/main/agents/HTCP_Agent.exe) from GitHub
-2. Right-click → Save As → Place in permanent location (e.g., `C:\HTCP_Agent\`)
-3. Run `HTCP_Agent.exe` - will appear in system tray
-4. Verify - Check system tray for HTCP Agent icon
+1. Download [HTPC_Agent.exe](https://github.com/mase1981/uc-intg-htpc/blob/main/agents/HTPC_Agent.exe) from GitHub
+2. Right-click → Save As → Place in permanent location (e.g., `C:\HTPC_Agent\`)
+3. Run `HTPC_Agent.exe` - will appear in system tray
+4. Verify - Check system tray for HTPC Agent icon
 5. Test - Right-click tray icon → Status & Control → should open web interface
 
 For detailed agent setup and troubleshooting, see: [`agents/README_Agent.md`](agents/README_Agent.md)
@@ -263,7 +263,7 @@ The remote entity provides comprehensive Windows control:
 Launch any application using Windows shortcut files (`.lnk`). This avoids the 20-character command name limit.
 
 **Setup:**
-1. Create a `shortcuts` folder next to `HTCP_Agent.exe` (e.g., `C:\HTCP_Agent\shortcuts\`)
+1. Create a `shortcuts` folder next to `HTPC_Agent.exe` (e.g., `C:\HTPC_Agent\shortcuts\`)
 2. Create or copy Windows shortcuts into this folder (right-click → New → Shortcut, or copy existing `.lnk` files)
 3. Name the shortcut file with a short name, e.g., `Chrome.lnk`, `Plex.lnk`, `Steam.lnk`
 

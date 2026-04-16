@@ -44,8 +44,8 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-class HTCPAgentTray:
-    """System tray application for HTCP Agent."""
+class HTPCAgentTray:
+    """System tray application for HTPC Agent."""
     
     def __init__(self):
         self.server = None
@@ -71,7 +71,7 @@ class HTCPAgentTray:
     def start_server(self):
         """Start the HTTP server in a separate thread."""
         try:
-            self.server = HTCPServer()
+            self.server = HTPCServer()
             self.server_thread = threading.Thread(target=self.server.run, daemon=True)
             self.server_thread.start()
             self.is_running = True
@@ -155,8 +155,8 @@ class ThreadedHTTPServer(ThreadingMixIn, HTTPServer):
     allow_reuse_address = True
 
 
-class HTCPServer:
-    """HTTP server for HTCP agent commands."""
+class HTPCServer:
+    """HTTP server for HTPC agent commands."""
     
     def __init__(self, port=8086):
         self.port = port
@@ -166,7 +166,7 @@ class HTCPServer:
     def run(self):
         """Run the HTTP server."""
         try:
-            self.server = ThreadedHTTPServer(('', self.port), HTCPAgentHandler)
+            self.server = ThreadedHTTPServer(('', self.port), HTPCAgentHandler)
             self.server.start_time = self.start_time
             logger.info(f"HTPC HTTP server listening on port {self.port}")
             self.server.serve_forever()
@@ -180,8 +180,8 @@ class HTCPServer:
             self.server.server_close()
 
 
-class HTCPAgentHandler(BaseHTTPRequestHandler):
-    """HTTP request handler for HTCP agent commands."""
+class HTPCAgentHandler(BaseHTTPRequestHandler):
+    """HTTP request handler for HTPC agent commands."""
 
     def log_message(self, format, *args):
         """Override to use our logger instead of stderr."""
@@ -746,7 +746,7 @@ def main():
         import ctypes
         ctypes.windll.user32.ShowWindow(ctypes.windll.kernel32.GetConsoleWindow(), 0)
     
-    app = HTCPAgentTray()
+    app = HTPCAgentTray()
     app.run()
 
 

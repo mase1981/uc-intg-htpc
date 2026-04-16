@@ -1,6 +1,6 @@
-# HTCP Agent - Windows Command Execution Service
+# HTPC Agent - Windows Command Execution Service
 
-The HTCP Agent is a lightweight Windows service that enables remote command execution for the HTPC System Monitor Integration. It provides secure, local network communication between your Unfolded Circle Remote and Windows PC.
+The HTPC Agent is a lightweight Windows service that enables remote command execution for the HTPC System Monitor Integration. It provides secure, local network communication between your Unfolded Circle Remote and Windows PC.
 
 ## 📋 Overview
 
@@ -19,38 +19,38 @@ The HTCP Agent is a lightweight Windows service that enables remote command exec
 ## 🚀 Installation
 
 ### Quick Install
-1. **Download**: `HTCP_Agent.exe` from this repository
-2. **Place**: In permanent location (e.g., `C:\HTCP_Agent\`)
-3. **Run**: Double-click `HTCP_Agent.exe`
-4. **Verify**: Check system tray for HTCP Agent icon
+1. **Download**: `HTPC_Agent.exe` from this repository
+2. **Place**: In permanent location (e.g., `C:\HTPC_Agent\`)
+3. **Run**: Double-click `HTPC_Agent.exe`
+4. **Verify**: Check system tray for HTPC Agent icon
 
 ### Detailed Installation
 
 #### Step 1: Download and Place
 ```bash
 # Create directory
-mkdir C:\HTCP_Agent
+mkdir C:\HTPC_Agent
 
 # Copy executable
-copy HTCP_Agent.exe C:\HTCP_Agent\
+copy HTPC_Agent.exe C:\HTPC_Agent\
 ```
 
 #### Step 2: First Run
-- **Double-click** `C:\HTCP_Agent\HTCP_Agent.exe`
+- **Double-click** `C:\HTPC_Agent\HTPC_Agent.exe`
 - **Allow** Windows Firewall access if prompted
-- **Check** system tray for HTCP Agent icon
+- **Check** system tray for HTPC Agent icon
 - **Test** by right-clicking tray icon → **Status & Control**
 
 #### Step 3: Auto-Start (Optional)
 ```bash
 # Method 1: Startup folder
 # Win+R → shell:startup
-# Create shortcut to HTCP_Agent.exe
+# Create shortcut to HTPC_Agent.exe
 
 # Method 2: Task Scheduler (more reliable)
 # Windows → Task Scheduler → Create Basic Task
 # Trigger: At startup
-# Action: Start program → C:\HTCP_Agent\HTCP_Agent.exe
+# Action: Start program → C:\HTPC_Agent\HTPC_Agent.exe
 ```
 
 ## 🔧 Configuration
@@ -70,11 +70,11 @@ The agent requires inbound connections on port 8086:
 **Manual**:
 ```bash
 # Windows Firewall command
-netsh advfirewall firewall add rule name="HTCP Agent" dir=in action=allow protocol=TCP localport=8086
+netsh advfirewall firewall add rule name="HTPC Agent" dir=in action=allow protocol=TCP localport=8086
 
 # Or via GUI:
 # Control Panel → Windows Defender Firewall → Allow an app
-# Browse → Select HTCP_Agent.exe → Add
+# Browse → Select HTPC_Agent.exe → Add
 ```
 
 ## 🎮 System Tray Interface
@@ -187,7 +187,7 @@ mute_toggle             # Toggle system mute
 **Solutions**:
 1. **Check dependencies**: Ensure all required DLLs are present
 2. **Run as Administrator**: Right-click → "Run as administrator"
-3. **Check antivirus**: Add HTCP_Agent.exe to antivirus exclusions
+3. **Check antivirus**: Add HTPC_Agent.exe to antivirus exclusions
 4. **Windows compatibility**: Ensure Windows 10/11 compatibility
 
 **Check log file**:
@@ -249,7 +249,7 @@ mute_toggle             # Toggle system mute
 
 ### Example Log Entries
 ```
-2025-01-16 10:30:15 - INFO - HTCP Agent started on port 8086
+2025-01-16 10:30:15 - INFO - HTPC Agent started on port 8086
 2025-01-16 10:30:16 - INFO - Web interface available at http://localhost:8086/status
 2025-01-16 10:35:22 - INFO - Command executed: custom_calc
 2025-01-16 10:35:25 - ERROR - Failed to execute: launch_exe:invalid_path.exe
@@ -295,8 +295,8 @@ For production environments, consider installing as Windows service:
 
 ```bash
 # Using NSSM (Non-Sucking Service Manager)
-nssm install HTCPAgent "C:\HTCP_Agent\HTCP_Agent.exe"
-nssm set HTCPAgent DisplayName "HTCP Agent Service"
+nssm install HTCPAgent "C:\HTPC_Agent\HTPC_Agent.exe"
+nssm set HTCPAgent DisplayName "HTPC Agent Service"
 nssm set HTCPAgent Description "HTPC Integration Command Agent"
 nssm start HTCPAgent
 ```
@@ -318,7 +318,7 @@ nssm start HTCPAgent
 
 ### Update Process
 1. **Stop current agent**: Right-click tray → Quit
-2. **Replace executable**: Overwrite HTCP_Agent.exe
+2. **Replace executable**: Overwrite HTPC_Agent.exe
 3. **Restart agent**: Double-click new executable
 4. **Verify operation**: Check system tray and test commands
 
@@ -344,7 +344,7 @@ nssm start HTCPAgent
 
 ---
 
-**HTCP Agent v1.0** - Part of the HTPC System Monitor Integration  
+**HTPC Agent v1.0** - Part of the HTPC System Monitor Integration  
 **Compatibility**: Windows 10/11  
 **License**: MPL-2.0  
 
