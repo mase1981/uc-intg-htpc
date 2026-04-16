@@ -54,6 +54,7 @@ class HTCPClient:
         self._config = config
         self._session: aiohttp.ClientSession | None = None
         self._system_data = SystemData()
+        self._logged_structure: bool = False
 
     @property
     def system_data(self) -> SystemData:
@@ -132,6 +133,10 @@ class HTCPClient:
         sd.detected_gpu_name = old.detected_gpu_name
 
         if "Children" in raw:
+            if not self._logged_structure:
+                self._log_hardware_structure(raw)
+                self._logged_structure = True
+
             cpu = self._detect_cpu(raw)
             if cpu:
                 sd.detected_cpu_name = cpu.get("Text", "CPU")
@@ -278,8 +283,24 @@ class HTCPClient:
         chips = self._find_components(data, (self.MOTHERBOARD_PREFIX,))
         return chips[0] if chips else None
 
+    def _log_hardware_structure(self, data: dict) -> None:
+        for hw in data.get("Children", []):
+            for comp in hw.get("Children", []):
+                hw_id = comp.get("HardwareId", "")
+                groups = [g.get("Text", "?") for g in comp.get("Children", [])]
+                _LOG.info("LHM component: '%s' [%s] groups=%s", comp.get("Text", "?"), hw_id, groups)
+
     def _find_sensor(
         self, hardware: dict, targets: list[str], group_filter: str | None = None
+    ) -> float | None:
+        if group_filter:
+            result = self._search_sensor_groups(hardware, targets, group_filter)
+            if result is not None:
+                return result
+        return self._search_sensor_groups(hardware, targets, None)
+
+    def _search_sensor_groups(
+        self, hardware: dict, targets: list[str], group_filter: str | None
     ) -> float | None:
         for group in hardware.get("Children", []):
             if group_filter and group_filter not in group.get("Text", "").lower():
