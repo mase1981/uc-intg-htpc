@@ -255,8 +255,6 @@ class HTCPClient:
         devices = []
         for comp in self._find_components(data, self.STORAGE_PREFIXES):
             used = self._find_sensor(comp, ["used space"], group_filter="load")
-            if used is None:
-                used = self._find_sensor(comp, ["used space"])
             if used is not None:
                 devices.append({"component": comp, "used": used})
         if devices:
@@ -293,15 +291,6 @@ class HTCPClient:
     def _find_sensor(
         self, hardware: dict, targets: list[str], group_filter: str | None = None
     ) -> float | None:
-        if group_filter:
-            result = self._search_sensor_groups(hardware, targets, group_filter)
-            if result is not None:
-                return result
-        return self._search_sensor_groups(hardware, targets, None)
-
-    def _search_sensor_groups(
-        self, hardware: dict, targets: list[str], group_filter: str | None
-    ) -> float | None:
         for group in hardware.get("Children", []):
             if group_filter and group_filter not in group.get("Text", "").lower():
                 continue
@@ -317,7 +306,7 @@ class HTCPClient:
     @staticmethod
     def _parse_value(value_str: str) -> float | None:
         try:
-            return float(value_str.split()[0])
+            return float(value_str.split()[0].replace(",", "."))
         except (ValueError, IndexError):
             return None
 
@@ -373,11 +362,7 @@ class HTCPClient:
 
     def _parse_network(self, hw: dict, sd: SystemData) -> None:
         ul = self._find_sensor(hw, ["upload speed", "tx", "sent"], group_filter="throughput")
-        if ul is None:
-            ul = self._find_sensor(hw, ["upload speed", "tx", "sent"], group_filter="data")
         dl = self._find_sensor(hw, ["download speed", "rx", "received"], group_filter="throughput")
-        if dl is None:
-            dl = self._find_sensor(hw, ["download speed", "rx", "received"], group_filter="data")
 
         def to_mbps(value: float | None, keywords: list[str]) -> float | None:
             if value is None:
