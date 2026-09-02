@@ -67,12 +67,13 @@ class HTCPMediaPlayer(MediaPlayerEntity):
         self.subscribe_to_device(device)
 
     async def sync_state(self) -> None:
-        if self._device.state == "UNAVAILABLE":
+        if self._device.state != "ON":
             self.update({
-                media_player.Attributes.STATE: media_player.States.UNAVAILABLE,
-                media_player.Attributes.MEDIA_TITLE: "Connection Lost",
-                media_player.Attributes.MEDIA_ARTIST: "Attempting reconnection...",
+                media_player.Attributes.STATE: media_player.States.OFF,
+                media_player.Attributes.MEDIA_TITLE: "HTPC Off",
+                media_player.Attributes.MEDIA_ARTIST: "Power on to monitor",
                 media_player.Attributes.MEDIA_ALBUM: "",
+                media_player.Attributes.MEDIA_IMAGE_URL: "",
             })
             return
 
@@ -205,7 +206,7 @@ class HTCPMediaPlayer(MediaPlayerEntity):
     ) -> StatusCodes:
         match cmd_id:
             case media_player.Commands.ON:
-                pass
+                await self._device.power_on_wol()
             case media_player.Commands.OFF:
                 await self._device.send_command("power_sleep")
             case media_player.Commands.SELECT_SOURCE:

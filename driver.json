@@ -1,6 +1,6 @@
 {
   "driver_id": "uc_intg_htpc",
-  "version": "2.0.6",
+  "version": "2.1.0",
   "min_core_api": "0.22.0",
   "name": {
     "en": "HTPC System Monitor",
@@ -19,7 +19,7 @@
     "url": "https://github.com/mase1981/uc-intg-htpc"
   },
   "home_page": "https://github.com/mase1981/uc-intg-htpc",
-  "release_date": "2026-04-16",
+  "release_date": "2026-09-02",
   "setup_data_schema": {
     "title": {
       "en": "HTPC System Monitor Setup",

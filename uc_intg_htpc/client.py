@@ -203,8 +203,6 @@ class HTCPClient:
             _LOG.error("WoL failed: %s", err)
             return False
 
-    # --- Hardware detection by HardwareId ---
-
     CPU_PREFIXES = ("/intelcpu/", "/amdcpu/")
     GPU_PREFIXES = ("/gpu-nvidia/", "/gpu-amd/", "/gpu-intel/")
     MEMORY_PREFIX = "/ram"

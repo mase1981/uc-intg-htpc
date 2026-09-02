@@ -71,10 +71,10 @@ class HTCPRemote(RemoteEntity):
         self.subscribe_to_device(device)
 
     async def sync_state(self) -> None:
-        if self._device.state == "UNAVAILABLE":
-            self.update({remote.Attributes.STATE: remote.States.UNAVAILABLE})
-        else:
+        if self._device.state == "ON":
             self.update({remote.Attributes.STATE: remote.States.ON})
+        else:
+            self.update({remote.Attributes.STATE: remote.States.OFF})
 
     async def _handle_command(
         self, entity: Any, cmd_id: str, params: dict[str, Any] | None

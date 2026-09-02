@@ -12,12 +12,12 @@ env:
 jobs:
   build:
     name: Build Release
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-24.04-arm
     outputs:
       version: ${{ steps.get-version-and-id.outputs.VERSION }}
       driver_id: ${{ steps.get-version-and-id.outputs.DRIVER_ID }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
         with:
           fetch-depth: 200
 
@@ -32,10 +32,8 @@ jobs:
 
       - name: Build
         run: |
-          sudo apt-get update && sudo apt-get install -y qemu-system-arm binfmt-support qemu-user-static
-          docker run --rm --privileged multiarch/qemu-user-static --reset -p yes
           docker run --rm --name builder \
-            --platform=linux/arm64 \
+            --platform=aarch64 \
             --user=$(id -u):$(id -g) \
             -v ${GITHUB_WORKSPACE}:/workspace \
             docker.io/unfoldedcircle/r2-pyinstaller:${PYTHON_VER} \
@@ -69,7 +67,7 @@ jobs:
 
       - run: tar czvf ${{ env.ARTIFACT_NAME }}.tar.gz -C ${GITHUB_WORKSPACE}/artifacts .
 
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: ${{ env.ARTIFACT_NAME }}
           path: ${{ env.ARTIFACT_NAME }}.tar.gz
@@ -84,21 +82,23 @@ jobs:
       contents: read
       packages: write
     steps:
-      - uses: actions/checkout@v4
-      - uses: docker/setup-buildx-action@v3
-      - uses: docker/login-action@v3
+      - uses: actions/checkout@v6
+      - uses: docker/setup-buildx-action@v4
+      - uses: docker/login-action@v4
         with:
           registry: ghcr.io
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
       - id: meta
-        uses: docker/metadata-action@v5
+        uses: docker/metadata-action@v6
         with:
           images: ghcr.io/${{ github.repository_owner }}/uc-intg-htpc
           tags: |
             type=ref,event=tag
             type=raw,value=latest
-      - uses: docker/build-push-action@v5
+      - uses: docker/build-push-action@v7
+        env:
+          DOCKER_BUILD_RECORD_UPLOAD: false
         with:
           context: .
           platforms: linux/amd64,linux/arm64
@@ -113,7 +113,9 @@ jobs:
     permissions:
       contents: write
     steps:
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@v8
+        with:
+          pattern: uc-intg-*
       - run: for D in *; do if [ -d "${D}" ]; then mv $D/* ./; fi; done
       - run: |
           for f in *.tar.gz; do

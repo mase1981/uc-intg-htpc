@@ -27,6 +27,7 @@ class HTCPSensor(SensorEntity):
         device_class: str,
         device: Any,
         value_getter: Callable,
+        decimals: int = 1,
     ) -> None:
         self._device = device
         self._value_getter = value_getter
@@ -36,21 +37,28 @@ class HTCPSensor(SensorEntity):
             [],
             {
                 sensor.Attributes.STATE: sensor.States.UNKNOWN,
-                sensor.Attributes.VALUE: "N/A",
+                sensor.Attributes.VALUE: 0,
                 sensor.Attributes.UNIT: unit,
             },
             device_class=device_class,
+            options={
+                sensor.Options.CUSTOM_UNIT: unit,
+                sensor.Options.DECIMALS: decimals,
+            },
         )
         self.subscribe_to_device(device)
 
     async def sync_state(self) -> None:
-        if self._device.state == "UNAVAILABLE":
+        if self._device.state != "ON":
             self.update({sensor.Attributes.STATE: sensor.States.UNAVAILABLE})
             return
         value = self._value_getter(self._device)
+        if value is None:
+            self.update({sensor.Attributes.STATE: sensor.States.UNKNOWN})
+            return
         self.update({
             sensor.Attributes.STATE: sensor.States.ON,
-            sensor.Attributes.VALUE: value if value is not None else "N/A",
+            sensor.Attributes.VALUE: value,
         })
 
 
@@ -60,48 +68,32 @@ def create_sensors(config: HTCPConfig, device: Any) -> list[SensorEntity]:
     temp_unit = config.temperature_symbol()
 
     def _temp(attr: str) -> Callable:
-        def getter(dev: Any) -> str | None:
+        def getter(dev: Any) -> float | None:
             val = getattr(dev.system_data, attr, None)
             if val is not None:
-                return f"{config.convert_temperature(val):.1f}"
-            return None
-        return getter
-
-    def _pct(attr: str) -> Callable:
-        def getter(dev: Any) -> str | None:
-            val = getattr(dev.system_data, attr, None)
-            if val is not None:
-                return f"{val:.1f}"
+                return round(config.convert_temperature(val), 1)
             return None
         return getter
 
     def _val(attr: str) -> Callable:
-        def getter(dev: Any) -> str | None:
+        def getter(dev: Any) -> float | None:
             val = getattr(dev.system_data, attr, None)
             if val is not None:
-                return f"{val:.1f}"
+                return round(float(val), 1)
             return None
         return getter
 
-    def _mem_pct(dev: Any) -> str | None:
+    def _mem_pct(dev: Any) -> float | None:
         d = dev.system_data
         if d.memory_used is not None and d.memory_total and d.memory_total > 0:
-            return f"{(d.memory_used / d.memory_total) * 100:.1f}"
+            return round((d.memory_used / d.memory_total) * 100, 1)
         return None
 
-    def _fan_avg(dev: Any) -> str | None:
+    def _fan_avg(dev: Any) -> float | None:
         d = dev.system_data
         if d.fan_speeds:
-            return f"{sum(d.fan_speeds) / len(d.fan_speeds):.0f}"
+            return round(sum(d.fan_speeds) / len(d.fan_speeds))
         return None
-
-    def _net_speed(attr: str) -> Callable:
-        def getter(dev: Any) -> str | None:
-            val = getattr(dev.system_data, attr, None)
-            if val is not None:
-                return f"{val:.1f}"
-            return None
-        return getter
 
     sensors: list[SensorEntity] = []
 
@@ -111,11 +103,11 @@ def create_sensors(config: HTCPConfig, device: Any) -> list[SensorEntity]:
     ))
     sensors.append(HTCPSensor(
         f"sensor.{ident}.cpu_load", f"{config.name} CPU Load",
-        "%", sensor.DeviceClasses.CUSTOM, device, _pct("cpu_load"),
+        "%", sensor.DeviceClasses.CUSTOM, device, _val("cpu_load"),
     ))
     sensors.append(HTCPSensor(
         f"sensor.{ident}.cpu_power", f"{config.name} CPU Power",
-        "W", sensor.DeviceClasses.CUSTOM, device, _val("cpu_power"),
+        "W", sensor.DeviceClasses.POWER, device, _val("cpu_power"),
     ))
     sensors.append(HTCPSensor(
         f"sensor.{ident}.gpu_temp", f"{config.name} GPU Temperature",
@@ -123,7 +115,7 @@ def create_sensors(config: HTCPConfig, device: Any) -> list[SensorEntity]:
     ))
     sensors.append(HTCPSensor(
         f"sensor.{ident}.gpu_load", f"{config.name} GPU Load",
-        "%", sensor.DeviceClasses.CUSTOM, device, _pct("gpu_load"),
+        "%", sensor.DeviceClasses.CUSTOM, device, _val("gpu_load"),
     ))
     sensors.append(HTCPSensor(
         f"sensor.{ident}.memory_usage", f"{config.name} Memory Usage",
@@ -131,19 +123,19 @@ def create_sensors(config: HTCPConfig, device: Any) -> list[SensorEntity]:
     ))
     sensors.append(HTCPSensor(
         f"sensor.{ident}.storage_usage", f"{config.name} Storage Usage",
-        "%", sensor.DeviceClasses.CUSTOM, device, _pct("storage_used_percent"),
+        "%", sensor.DeviceClasses.CUSTOM, device, _val("storage_used_percent"),
     ))
     sensors.append(HTCPSensor(
         f"sensor.{ident}.network_down", f"{config.name} Network Download",
-        "Mbps", sensor.DeviceClasses.CUSTOM, device, _net_speed("network_down"),
+        "Mbps", sensor.DeviceClasses.CUSTOM, device, _val("network_down"),
     ))
     sensors.append(HTCPSensor(
         f"sensor.{ident}.network_up", f"{config.name} Network Upload",
-        "Mbps", sensor.DeviceClasses.CUSTOM, device, _net_speed("network_up"),
+        "Mbps", sensor.DeviceClasses.CUSTOM, device, _val("network_up"),
     ))
     sensors.append(HTCPSensor(
         f"sensor.{ident}.fan_speed", f"{config.name} Fan Speed",
-        "RPM", sensor.DeviceClasses.CUSTOM, device, _fan_avg,
+        "RPM", sensor.DeviceClasses.CUSTOM, device, _fan_avg, decimals=0,
     ))
 
     return sensors
