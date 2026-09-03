@@ -12,6 +12,7 @@ from ucapi import sensor
 from ucapi_framework import SensorEntity
 
 from uc_intg_htpc.config import HTCPConfig
+from uc_intg_htpc.const import STATE_ON
 
 _LOG = logging.getLogger(__name__)
 
@@ -49,7 +50,7 @@ class HTCPSensor(SensorEntity):
         self.subscribe_to_device(device)
 
     async def sync_state(self) -> None:
-        if self._device.state != "ON":
+        if self._device.state != STATE_ON:
             self.update({sensor.Attributes.STATE: sensor.States.UNAVAILABLE})
             return
         value = self._value_getter(self._device)

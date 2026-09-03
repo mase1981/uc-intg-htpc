@@ -13,6 +13,7 @@ from ucapi.ui import UiPage, create_ui_icon, create_ui_text
 from ucapi_framework import RemoteEntity
 
 from uc_intg_htpc.config import HTCPConfig
+from uc_intg_htpc.const import STATE_ON
 from uc_intg_htpc.device import HTCPDevice
 
 _LOG = logging.getLogger(__name__)
@@ -71,10 +72,8 @@ class HTCPRemote(RemoteEntity):
         self.subscribe_to_device(device)
 
     async def sync_state(self) -> None:
-        if self._device.state == "ON":
-            self.update({remote.Attributes.STATE: remote.States.ON})
-        else:
-            self.update({remote.Attributes.STATE: remote.States.OFF})
+        state = remote.States.ON if self._device.state == STATE_ON else remote.States.OFF
+        self.update({remote.Attributes.STATE: state})
 
     async def _handle_command(
         self, entity: Any, cmd_id: str, params: dict[str, Any] | None

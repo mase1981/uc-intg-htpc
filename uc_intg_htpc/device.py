@@ -13,13 +13,13 @@ from typing import Any
 
 from ucapi_framework import PollingDevice
 
-from uc_intg_htpc.client import HTCPClient, SystemData
+from uc_intg_htpc.client import HTCPClient, SystemData, is_reachable
 from uc_intg_htpc.config import HTCPConfig
-from uc_intg_htpc.const import POLL_INTERVAL
+from uc_intg_htpc.const import AGENT_PORT, POLL_INTERVAL, STATE_OFF, STATE_ON
 
 _LOG = logging.getLogger(__name__)
 
-MAX_CONSECUTIVE_FAILURES = 5
+_CLOSE_TIMEOUT = 3
 
 
 class HTCPDevice(PollingDevice):
@@ -30,11 +30,14 @@ class HTCPDevice(PollingDevice):
         self._config = device_config
         self._client: HTCPClient | None = None
         self._connect_lock: asyncio.Lock = asyncio.Lock()
-        self._state: str = "OFF"
+        self._state: str = STATE_OFF
         self._system_data = SystemData()
         self._current_view: str = "System Overview"
-        self._consecutive_failures: int = 0
         self._icon_cache: dict[str, str] = {}
+
+    @property
+    def _probe_port(self) -> int:
+        return self._config.port if self._config.enable_hardware_monitoring else AGENT_PORT
 
     @property
     def identifier(self) -> str:
@@ -94,80 +97,51 @@ class HTCPDevice(PollingDevice):
         except Exception:
             return ""
 
-    async def establish_connection(self) -> None:
-        if await self._reconnect():
-            self._state = "ON"
-            self._consecutive_failures = 0
-            if self._config.enable_hardware_monitoring:
-                self._system_data = self._client.system_data
-            _LOG.info("%s Connected to HTPC", self.log_id)
-        else:
-            self._state = "OFF"
-            _LOG.info("%s HTPC off/unreachable, remote stays available for WoL", self.log_id)
-        self.push_update()
-
-    async def _reconnect(self) -> bool:
+    async def connect(self) -> bool:
         async with self._connect_lock:
-            if self._client is None:
-                self._client = HTCPClient(self._config)
-            return await self._client.connect()
+            return await super().connect()
+
+    async def establish_connection(self) -> HTCPClient:
+        if self._client is None:
+            self._client = HTCPClient(self._config)
+        await self._refresh_state()
+        return self._client
 
     async def poll_device(self) -> None:
-        if self._state != "ON":
-            if await self._reconnect():
-                self._state = "ON"
-                self._consecutive_failures = 0
-                if self._config.enable_hardware_monitoring:
-                    self._system_data = self._client.system_data
-                _LOG.info("%s Reconnected to HTPC", self.log_id)
+        await self._refresh_state()
+
+    async def _refresh_state(self) -> None:
+        if self._client is None:
+            self._state = STATE_OFF
             self.push_update()
             return
 
-        if not self._client:
-            self._state = "OFF"
-            self.push_update()
-            return
-
-        if self._config.enable_hardware_monitoring:
-            reachable = await self._client.update_system_data()
-            if reachable:
+        if await is_reachable(self._config.host, self._probe_port):
+            self._client.ensure_session()
+            if self._config.enable_hardware_monitoring and await self._client.update_system_data():
                 self._system_data = self._client.system_data
+            self._state = STATE_ON
         else:
-            reachable = await self._client.test_agent()
-
-        if reachable:
-            self._consecutive_failures = 0
-        else:
-            self._consecutive_failures += 1
-            _LOG.warning(
-                "%s HTPC unreachable %d/%d",
-                self.log_id, self._consecutive_failures, MAX_CONSECUTIVE_FAILURES,
-            )
-            if self._consecutive_failures >= MAX_CONSECUTIVE_FAILURES:
-                self._state = "OFF"
-                self._consecutive_failures = 0
-
+            self._state = STATE_OFF
         self.push_update()
 
     async def send_command(self, command: str) -> bool:
-        if not self._client:
-            return False
-        if await self._client.send_command(command):
-            return True
-        if await self._reconnect():
-            return await self._client.send_command(command)
-        return False
+        if self._client is None:
+            self._client = HTCPClient(self._config)
+        self._client.ensure_session()
+        return await self._client.send_command(command)
 
     async def power_on_wol(self) -> bool:
-        if self._client:
-            return await self._client.power_on_wol()
-        temp_client = HTCPClient(self._config)
-        return await temp_client.power_on_wol()
+        client = self._client or HTCPClient(self._config)
+        return await client.power_on_wol()
 
     async def disconnect(self) -> None:
         async with self._connect_lock:
-            if self._client:
-                await self._client.close()
+            if self._client is not None:
+                try:
+                    await asyncio.wait_for(self._client.close(), timeout=_CLOSE_TIMEOUT)
+                except Exception:
+                    pass
                 self._client = None
-        self._state = "UNAVAILABLE"
-        await super().disconnect()
+            self._state = STATE_OFF
+            await super().disconnect()

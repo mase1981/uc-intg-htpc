@@ -20,6 +20,20 @@ from uc_intg_htpc.const import AGENT_PORT
 _LOG = logging.getLogger(__name__)
 
 
+async def is_reachable(host: str, port: int, timeout: float = 2.0) -> bool:
+    """Quick TCP probe: True if the HTPC is up and accepting connections."""
+    try:
+        _, writer = await asyncio.wait_for(asyncio.open_connection(host, port), timeout=timeout)
+        writer.close()
+        try:
+            await writer.wait_closed()
+        except Exception:
+            pass
+        return True
+    except (OSError, asyncio.TimeoutError):
+        return False
+
+
 class SystemData:
     """Parsed hardware sensor data from LibreHardwareMonitor."""
 
@@ -60,13 +74,16 @@ class HTCPClient:
     def system_data(self) -> SystemData:
         return self._system_data
 
-    async def connect(self) -> bool:
+    def ensure_session(self) -> None:
         if not self._session:
             connector = aiohttp.TCPConnector(limit=3)
             self._session = aiohttp.ClientSession(
                 timeout=aiohttp.ClientTimeout(total=10, connect=5),
                 connector=connector,
             )
+
+    async def connect(self) -> bool:
+        self.ensure_session()
         if self._config.enable_hardware_monitoring:
             return await self.update_system_data()
         return await self.test_agent()

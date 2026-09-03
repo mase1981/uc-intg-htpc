@@ -12,7 +12,7 @@ from ucapi import StatusCodes, media_player
 from ucapi_framework import MediaPlayerEntity
 
 from uc_intg_htpc.config import HTCPConfig
-from uc_intg_htpc.const import MONITORING_VIEWS
+from uc_intg_htpc.const import MONITORING_VIEWS, STATE_ON
 from uc_intg_htpc.device import HTCPDevice
 
 _LOG = logging.getLogger(__name__)
@@ -67,7 +67,7 @@ class HTCPMediaPlayer(MediaPlayerEntity):
         self.subscribe_to_device(device)
 
     async def sync_state(self) -> None:
-        if self._device.state != "ON":
+        if self._device.state != STATE_ON:
             self.update({
                 media_player.Attributes.STATE: media_player.States.OFF,
                 media_player.Attributes.MEDIA_TITLE: "HTPC Off",
